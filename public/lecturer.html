@@ -107,10 +107,13 @@
         <select name="difficulty" id="field-difficulty"><option>Dễ</option><option>Trung bình</option><option>Khó</option></select>
         <label>Mô tả Markdown</label>
         <textarea name="description" id="field-description" rows="4"></textarea>
-        <label>Yêu cầu (mỗi dòng 1 yêu cầu)</label>
-        <textarea name="requirements" id="field-requirements" rows="3"></textarea>
-        <label>Tiêu chí chấm (mỗi dòng 1 tiêu chí)</label>
-        <textarea name="grading_criteria" id="field-grading" rows="3"></textarea>
+        <label>Yêu cầu</label>
+        <div id="requirements-list"></div>
+        <div style="margin:6px 0"><button type="button" id="req-add">+ Thêm yêu cầu</button></div>
+
+        <label>Tiêu chí chấm</label>
+        <div id="grading-list"></div>
+        <div style="margin:6px 0"><button type="button" id="grade-add">+ Thêm tiêu chí</button></div>
         <label>Định dạng nộp</label>
         <input name="submission_format" id="field-submission" />
         <label>File kèm</label>

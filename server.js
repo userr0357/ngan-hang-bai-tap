@@ -213,6 +213,25 @@ async function insertExerciseToSQL(exercise, subjectCode) {
   try {
     const pool = await sql.connect(sqlConfig);
     try {
+      // Helper: resolve code by name from table
+      async function resolveCode(table, codeCol, nameCol, val) {
+        if (!val) return null;
+        const n = Number(val);
+        if (Number.isInteger(n)) return n;
+        try {
+          const r = await pool.request().input('val', sql.NVarChar, String(val)).query(
+            `SELECT TOP 1 ${codeCol} AS code FROM dbo.${table} WHERE ${nameCol} = @val OR ${nameCol} LIKE '%' + @val + '%'`
+          );
+          if (r && r.recordset && r.recordset.length) {
+            const code = r.recordset[0].code;
+            const cnum = Number(code);
+            return Number.isInteger(cnum) ? cnum : null;
+          }
+        } catch (e) {
+          // ignore and return null
+        }
+        return null;
+      }
       const req = pool.request();
       req.input('MaBaiTap', sql.NVarChar, exercise.id);
       req.input('TenBaiTap', sql.NVarChar, exercise.title || '');
@@ -220,8 +239,24 @@ async function insertExerciseToSQL(exercise, subjectCode) {
       req.input('MoTa', sql.NVarChar, exercise.description || '');
       req.input('YeuCau', sql.NVarChar, Array.isArray(exercise.requirements) ? exercise.requirements.join('\n') : '');
       req.input('TieuChiChamDiem', sql.NVarChar, JSON.stringify(exercise.grading_criteria || []));
-      req.input('MaDinhDang', sql.NVarChar, exercise.submission_format || '');
-      req.input('MaDoKho', sql.NVarChar, exercise.difficulty || 'Dễ');
+      // Resolve MaDinhDang and MaDoKho codes from human-readable values when necessary
+      let md = await resolveCode('DINHDANG_NOPBAI', 'MaDinhDang', 'TenDinhDang', exercise.submission_format);
+      let mk = await resolveCode('DOKHO', 'MaDoKho', 'TenDoKho', exercise.difficulty);
+      // if mapping failed, pick a safe default (first available code) to avoid NULL inserts
+      if (md == null) {
+        try {
+          const r = await pool.request().query('SELECT TOP 1 MaDinhDang AS code FROM dbo.DINHDANG_NOPBAI');
+          if (r && r.recordset && r.recordset.length) md = Number(r.recordset[0].code) || null;
+        } catch (e) { md = null; }
+      }
+      if (mk == null) {
+        try {
+          const r2 = await pool.request().query('SELECT TOP 1 MaDoKho AS code FROM dbo.DOKHO');
+          if (r2 && r2.recordset && r2.recordset.length) mk = Number(r2.recordset[0].code) || null;
+        } catch (e) { mk = null; }
+      }
+      req.input('MaDinhDang', sql.Int, md);
+      req.input('MaDoKho', sql.Int, mk);
       
       const q = `INSERT INTO dbo.BAITAP (MaBaiTap, TenBaiTap, MaMon, MoTa, YeuCau, TieuChiChamDiem, MaDinhDang, MaDoKho)
                  VALUES (@MaBaiTap, @TenBaiTap, @MaMon, @MoTa, @YeuCau, @TieuChiChamDiem, @MaDinhDang, @MaDoKho)`;
@@ -237,22 +272,49 @@ async function insertExerciseToSQL(exercise, subjectCode) {
 }
 
 async function updateExerciseInSQL(exercise, subjectCode) {
-  const pool = await sql.connect(sqlConfig);
   try {
-    const req = pool.request();
-    req.input('MaBaiTap', sql.NVarChar, exercise.id);
-    req.input('TenBaiTap', sql.NVarChar, exercise.title || '');
-    req.input('MaMon', sql.NVarChar, subjectCode || '');
-    req.input('MoTa', sql.NVarChar, exercise.description || '');
-    req.input('YeuCau', sql.NVarChar, Array.isArray(exercise.requirements) ? exercise.requirements.join('\n') : '');
-    req.input('TieuChiChamDiem', sql.NVarChar, JSON.stringify(exercise.grading_criteria || []));
-    req.input('MaDinhDang', sql.NVarChar, exercise.submission_format || '');
-    req.input('MaDoKho', sql.NVarChar, exercise.difficulty || 'Dễ');
-    
-    const q = `UPDATE dbo.BAITAP SET TenBaiTap=@TenBaiTap, MaMon=@MaMon, MoTa=@MoTa, YeuCau=@YeuCau, TieuChiChamDiem=@TieuChiChamDiem, MaDinhDang=@MaDinhDang, MaDoKho=@MaDoKho
-               WHERE MaBaiTap=@MaBaiTap`;
-    await req.query(q);
-    return true;
+    const pool = await sql.connect(sqlConfig);
+    try {
+      // Helper: resolve code by name from table
+      async function resolveCode(table, codeCol, nameCol, val) {
+        if (!val) return null;
+        const n = Number(val);
+        if (Number.isInteger(n)) return n;
+        try {
+          const r = await pool.request().input('val', sql.NVarChar, String(val)).query(
+            `SELECT TOP 1 ${codeCol} AS code FROM dbo.${table} WHERE ${nameCol} = @val OR ${nameCol} LIKE '%' + @val + '%'`
+          );
+          if (r && r.recordset && r.recordset.length) {
+            const code = r.recordset[0].code;
+            const cnum = Number(code);
+            return Number.isInteger(cnum) ? cnum : null;
+          }
+        } catch (e) {
+          console.error('[debug] resolveCode error for', table, val, e.message);
+        }
+        return null;
+      }
+
+      const req = pool.request();
+      req.input('MaBaiTap', sql.NVarChar, exercise.id);
+      req.input('TenBaiTap', sql.NVarChar, exercise.title || '');
+      req.input('MaMon', sql.NVarChar, subjectCode || '');
+      req.input('MoTa', sql.NVarChar, exercise.description || '');
+      req.input('YeuCau', sql.NVarChar, Array.isArray(exercise.requirements) ? exercise.requirements.join('\n') : '');
+      req.input('TieuChiChamDiem', sql.NVarChar, JSON.stringify(exercise.grading_criteria || []));
+
+      const md = await resolveCode('DINHDANG_NOPBAI', 'MaDinhDang', 'TenDinhDang', exercise.submission_format);
+      const mk = await resolveCode('DOKHO', 'MaDoKho', 'TenDoKho', exercise.difficulty);
+      req.input('MaDinhDang', sql.Int, md);
+      req.input('MaDoKho', sql.Int, mk);
+
+      const q = `UPDATE dbo.BAITAP SET TenBaiTap=@TenBaiTap, MaMon=@MaMon, MoTa=@MoTa, YeuCau=@YeuCau, TieuChiChamDiem=@TieuChiChamDiem, MaDinhDang=@MaDinhDang, MaDoKho=@MaDoKho
+                 WHERE MaBaiTap=@MaBaiTap`;
+      await req.query(q);
+      return true;
+    } finally {
+      await sql.close();
+    }
   } catch (err) {
     console.error('SQL UPDATE failed:', err.message);
     return false;
@@ -278,6 +340,7 @@ async function deleteExerciseFromSQL(exerciseId) {
 // ==================================================
 async function buildSubjectsFromExternal(prefix) {
   const rows = await queryExternalExercises(prefix);
+  console.log('[debug] Rows from external DB:', rows.length);
   const subjects = {};
 
   for (const r of rows) {
@@ -310,6 +373,7 @@ async function buildSubjectsFromExternal(prefix) {
 
   // finalize counts and sort
   const out = Object.values(subjects);
+  console.log('[debug] Built subjects:', out.length, 'with exercises:', out.map(s => s.forms.map(f => f.exercises.length)));
   out.forEach(sub => {
     sub.forms.forEach(f => { f.exercise_count = f.exercises.length; });
     sub.total_exercises = sub.forms.reduce((s, f) => s + (f.exercise_count || 0), 0);
@@ -400,7 +464,7 @@ function auth(req, res, next) {
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     next();
-  } catch {
+  } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
   }
 }
@@ -426,12 +490,43 @@ function checkSubjectPermission(req, res, next) {
 // ==================================================
 //  EXERCISE CRUD
 // ==================================================
-app.post('/api/exercise', auth, checkSubjectPermission, upload.array('files'), async (req, res) => {
+// NOTE: run multer `upload.array('files')` before `checkSubjectPermission` so
+// multipart/form-data fields (e.g. subject_id) are available to the permission
+// middleware. Previously the check ran before multer and `req.body` was empty.
+app.post('/api/exercise', auth, upload.array('files'), checkSubjectPermission, async (req, res) => {
   try {
     const payload = req.body;
     const useExternal = (process.env.USE_EXTERNAL_DB || '').toLowerCase() === '1' || (process.env.USE_EXTERNAL_DB || '').toLowerCase() === 'true';
 
-    const exercise = JSON.parse(payload.exercise);
+    let exercise;
+    try {
+      if (typeof payload.exercise === 'string') {
+        // try direct parse first
+        try {
+          exercise = JSON.parse(payload.exercise);
+        } catch (e) {
+          // attempt to clean common escaping issues (pragmatic fallback)
+          let s = payload.exercise.trim();
+          // remove stray backslashes before quotes
+          s = s.replace(/\\(\")/g, '"');
+          // remove other backslashes that may have been added by some clients
+          s = s.replace(/\\/g, '');
+          // convert single quotes to double quotes if present
+          if (s[0] === "'" && s[s.length-1] === "'") s = '"' + s.slice(1, -1).replace(/"/g, '\\"') + '"';
+          try {
+            exercise = JSON.parse(s);
+          } catch (e2) {
+            console.error('Failed to parse exercise payload (fallback):', payload.exercise, e2.message);
+            return res.status(400).json({ error: 'Invalid exercise payload' });
+          }
+        }
+      } else {
+        exercise = payload.exercise;
+      }
+    } catch (e) {
+      console.error('Failed to parse exercise payload unexpected error:', e.message);
+      return res.status(400).json({ error: 'Invalid exercise payload' });
+    }
     const subjectId = payload.subject_id;
 
     // add created_at timestamp for new exercises if not provided
@@ -448,7 +543,8 @@ app.post('/api/exercise', auth, checkSubjectPermission, upload.array('files'), a
 
     // If using external DB, also insert into SQL
     if (useExternal) {
-      await insertExerciseToSQL(exercise, subjectId);
+      const ok = await insertExerciseToSQL(exercise, subjectId);
+      if (!ok) return res.status(500).json({ error: 'Failed to insert exercise into external DB' });
     } else {
       // Insert into local db.json
       const db = readDB();
@@ -484,7 +580,7 @@ app.post('/api/exercise', auth, checkSubjectPermission, upload.array('files'), a
 });
 
 // update
-app.put('/api/exercise/:id', auth, checkSubjectPermission, upload.array('files'), async (req, res) => {
+app.put('/api/exercise/:id', auth, upload.array('files'), checkSubjectPermission, async (req, res) => {
   try {
     const id = req.params.id;
     const useExternal = (process.env.USE_EXTERNAL_DB || '').toLowerCase() === '1' || (process.env.USE_EXTERNAL_DB || '').toLowerCase() === 'true';
@@ -493,8 +589,9 @@ app.put('/api/exercise/:id', auth, checkSubjectPermission, upload.array('files')
 
     if (useExternal) {
       // Update SQL for external DB
-      await updateExerciseInSQL(updated, subjectId);
-      res.json({ success: true });
+      const ok = await updateExerciseInSQL(updated, subjectId);
+      if (!ok) return res.status(500).json({ error: 'Failed to update exercise in external DB' });
+      return res.json({ success: true });
     } else {
       // Update local db.json
       const db = readDB();

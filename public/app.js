@@ -39,6 +39,84 @@ function normalizeDifficultyLabel(raw) {
   return '';
 }
 
+function criteriaCount(g) {
+  if (!g) return 0;
+  if (Array.isArray(g)) return g.length;
+  if (g.tieu_chi && Array.isArray(g.tieu_chi)) return g.tieu_chi.length;
+  return 0;
+}
+
+function getCriteriaArray(g) {
+  if (!g) return [];
+  if (Array.isArray(g)) return g;
+  if (g.tieu_chi && Array.isArray(g.tieu_chi)) return g.tieu_chi;
+  return [];
+}
+
+// Dynamic form helpers for requirements and grading criteria
+function addRequirementField(container, value) {
+  const row = document.createElement('div');
+  row.className = 'req-row';
+  row.style.display = 'flex';
+  row.style.gap = '8px';
+  row.style.marginBottom = '6px';
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = value || '';
+  inp.style.flex = '1';
+  inp.placeholder = 'Yêu cầu';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '-';
+  btn.style.width = '36px';
+  btn.onclick = () => row.remove();
+  row.appendChild(inp);
+  row.appendChild(btn);
+  container.appendChild(row);
+  return row;
+}
+
+function addGradingField(container, item) {
+  const row = document.createElement('div');
+  row.className = 'grade-row';
+  row.style.display = 'flex';
+  row.style.gap = '8px';
+  row.style.marginBottom = '6px';
+  const name = document.createElement('input');
+  name.type = 'text';
+  name.className = 'grade-name';
+  name.placeholder = 'Tên tiêu chí';
+  name.style.flex = '1';
+  const points = document.createElement('input');
+  points.type = 'number';
+  points.className = 'grade-points';
+  points.placeholder = 'Điểm';
+  points.style.width = '80px';
+  const note = document.createElement('input');
+  note.type = 'text';
+  note.className = 'grade-note';
+  note.placeholder = 'Ghi chú (tuỳ chọn)';
+  note.style.width = '180px';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '-';
+  btn.style.width = '36px';
+  btn.onclick = () => row.remove();
+  if (typeof item === 'string') {
+    name.value = item;
+  } else if (item) {
+    name.value = item.name || '';
+    points.value = item.points != null ? item.points : '';
+    note.value = item.note || '';
+  }
+  row.appendChild(name);
+  row.appendChild(points);
+  row.appendChild(note);
+  row.appendChild(btn);
+  container.appendChild(row);
+  return row;
+}
+
 try {
   const ef = localStorage.getItem('expandedForms');
   if (ef) state.expandedForms = JSON.parse(ef);
@@ -46,22 +124,38 @@ try {
 
 async function loadSubjects() {
   state.subjects = await fetchJSON('/api/subjects');
+  // attempt to fetch current lecturer (if logged in via cookie)
+  try {
+    const me = await fetchJSON('/api/lecturer/me', { credentials: 'include' });
+    state.lecturer = me;
+  } catch (e) {
+    state.lecturer = null;
+  }
   renderSidebar();
   populateLecturerSelects();
   try { updateLoginButton(); } catch (e) {}
   try {
     const hash = (location.hash || '').replace(/^#/, '');
-    if (!hash && state.subjects && state.subjects.length) {
-      await selectSubject(state.subjects[0].subject_id);
+    const visible = getVisibleSubjects();
+    if (!hash && visible && visible.length) {
+      await selectSubject(visible[0].subject_id);
     }
   } catch (e) { }
+}
+
+function getVisibleSubjects() {
+  if (!state.lecturer) return state.subjects || [];
+  if (state.lecturer.is_admin) return state.subjects || [];
+  const allowed = state.lecturer.allowed_subjects || [];
+  return (state.subjects || []).filter(s => allowed.includes(s.subject_id));
 }
 
 function renderSidebar() {
   const ul = document.getElementById('subject-list');
   if (!ul) return;
   ul.innerHTML = '';
-  state.subjects.forEach(s => {
+  const subjectsToShow = getVisibleSubjects();
+  subjectsToShow.forEach(s => {
     const li = document.createElement('li');
     li.textContent = `${s.subject_name} (${s.total_exercises})`;
     li.onclick = async () => { 
@@ -274,7 +368,7 @@ function renderSubject() {
 
       const footer = document.createElement('div');
       footer.className = 'exercise-card-footer';
-      footer.innerHTML = `📋 ${ex.requirements?.length || 0} yêu cầu | 📊 ${ex.grading_criteria?.length || 0} tiêu chí`;
+      footer.innerHTML = `📋 ${ex.requirements?.length || 0} yêu cầu | 📊 ${criteriaCount(ex.grading_criteria)} tiêu chí`;
 
       card.appendChild(cardTitle);
       card.appendChild(badge);
@@ -331,10 +425,13 @@ function showExerciseDetail(exercise, form) {
         <div class="modal-section-title">Yêu cầu (${exercise.requirements.length})</div>
         <ul>${exercise.requirements.map(r => `<li>${DOMPurify.sanitize(marked.parse(r))}</li>`).join('')}</ul>
       </div>` : ''}
-      ${exercise.grading_criteria && exercise.grading_criteria.length ? `<div class="modal-section">
-        <div class="modal-section-title">Tiêu chí chấm (${exercise.grading_criteria.length})</div>
-        <ul>${exercise.grading_criteria.map(g => `<li>${DOMPurify.sanitize(marked.parse(typeof g === 'string' ? g : g.name || ''))}</li>`).join('')}</ul>
-      </div>` : ''}
+      ${criteriaCount(exercise.grading_criteria) ? (() => {
+        const arr = getCriteriaArray(exercise.grading_criteria);
+        return `<div class="modal-section">
+        <div class="modal-section-title">Tiêu chí chấm (${arr.length})</div>
+        <ul>${arr.map(g => `<li>${DOMPurify.sanitize(marked.parse(typeof g === 'string' ? g : g.name || ''))}</li>`).join('')}</ul>
+      </div>`;
+      })() : ''}
     `;
   }
 
@@ -348,6 +445,7 @@ function showExercise(ex) {
   }
 
   function renderGradingHtml(criteria) {
+    console.log('Rendering grading criteria:', criteria);
     let items = [];
     if (!criteria) {
       return '<div class="small muted">(Không có tiêu chí)</div>';
@@ -545,7 +643,9 @@ const btnLogout = document.getElementById('btn-logout');
 if (btnLogout) btnLogout.onclick = () => {
   fetch('/api/lecturer/logout', { method: 'POST', credentials: 'include' }).finally(()=>{
     try { localStorage.removeItem('lecturer'); } catch(e){}
-    updateLoginButton();
+    try { localStorage.removeItem('theme'); } catch(e){}
+    // ensure client redirects to login page after logout
+    window.location.href = '/login';
   });
 };
 
@@ -554,7 +654,8 @@ function populateLecturerSelects() {
   const selForm = document.getElementById('form-form');
   if (!selSub) return;
   selSub.innerHTML = '';
-  state.subjects.forEach(s => {
+  const subjectsToShow = state.lecturer && !state.lecturer.is_admin ? getVisibleSubjects() : state.subjects;
+  (subjectsToShow || []).forEach(s => {
     const o = document.createElement('option'); 
     o.value = s.subject_id; 
     o.textContent = s.subject_name; 
@@ -649,7 +750,8 @@ function renderManageList() {
   if (!container) return;
   container.innerHTML = '';
   
-  state.subjects.forEach(s => {
+  const subjectsToShow = state.lecturer && !state.lecturer.is_admin ? getVisibleSubjects() : state.subjects;
+  (subjectsToShow || []).forEach(s => {
     const h = document.createElement('h4'); 
     h.textContent = s.subject_name; 
     h.style.marginTop = '20px';
@@ -696,18 +798,14 @@ function renderManageList() {
             <span class="${diffBadgeClass}" style="padding: 3px 8px; border-radius: 3px; color: white; font-size: 12px;">${ex.difficulty}</span>
           </td>
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${ex.requirements?.length || 0}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${ex.grading_criteria?.length || 0}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${criteriaCount(ex.grading_criteria)}</td>
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"></td>
         `;
         
-        // Click row to view details
+        // Click row to view details (remove separate detail button)
         const viewBtn = row.cells[5];
-        viewBtn.innerHTML = '<button onclick="event.stopPropagation()" style="padding:4px 8px; margin-right:4px; background:#0066cc; color:white; border:none; border-radius:3px; cursor:pointer;">Chi tiết</button>';
-        const detailBtn = viewBtn.querySelector('button');
-        detailBtn.onclick = (e) => {
-          e.stopPropagation();
-          showExerciseLecturerDetail(ex, f, s);
-        };
+        viewBtn.innerHTML = '';
+        row.onclick = () => showExerciseLecturerDetail(ex, f, s);
         
         // Edit button
         const editBtn = document.createElement('button');
@@ -729,13 +827,18 @@ function renderManageList() {
             formEl.querySelector('[name=title]').value = ex.title;
             formEl.querySelector('[name=difficulty]').value = ex.difficulty;
             formEl.querySelector('[name=description]').value = ex.description || '';
-            formEl.querySelector('[name=requirements]').value = (ex.requirements||[]).join('\n');
-            formEl.querySelector('[name=grading_criteria]').value = (ex.grading_criteria||[]).map(g => {
-              if (!g) return '';
-              if (typeof g === 'string') return g;
-              const note = g.note ? ` — ${g.note}` : '';
-              return `${g.name} — ${g.points}${note}`;
-            }).join('\n');
+            // populate dynamic requirements list
+            const reqContainer = document.getElementById('requirements-list');
+            if (reqContainer) {
+              reqContainer.innerHTML = '';
+              (ex.requirements||[]).forEach(r => addRequirementField(reqContainer, r));
+            }
+            // populate dynamic grading list
+            const gradeContainer = document.getElementById('grading-list');
+            if (gradeContainer) {
+              gradeContainer.innerHTML = '';
+              getCriteriaArray(ex.grading_criteria||[]).forEach(g => addGradingField(gradeContainer, g));
+            }
             formEl.querySelector('[name=submission_format]').value = ex.submission_format || '';
             const selSub = document.getElementById('form-subject');
             selSub.value = s.subject_id;
@@ -743,10 +846,10 @@ function renderManageList() {
             const formSelect = document.getElementById('form-form');
             if (formSelect) formSelect.value = f.form_id;
             try { localStorage.setItem('editTarget', JSON.stringify({ subject_id: s.subject_id, form_id: f.form_id, id: ex.id })); } catch (e) {}
-            // 🔧 Show editor panel after filling form
-            const panelModal = document.getElementById('lecturer-panel');
-            if (panelModal) {
-              panelModal.classList.remove('hidden');
+            // Show exercise modal after filling form
+            const modalEl = document.getElementById('exercise-modal');
+            if (modalEl) {
+              modalEl.classList.add('show');
               setTimeout(() => {
                 const titleField = formEl.querySelector('[name=title]');
                 if (titleField) titleField.focus();
@@ -807,7 +910,7 @@ function showExerciseLecturerDetail(exercise, form, subject) {
     <h3>Yêu cầu</h3>
     <ol>${(exercise.requirements || []).map(r => `<li>${r}</li>`).join('') || '<li>(Không có)</li>'}</ol>
     <h3>Tiêu chí chấm</h3>
-    <ul>${(exercise.grading_criteria || []).map(g => {
+    <ul>${getCriteriaArray(exercise.grading_criteria).map(g => {
       if (typeof g === 'string') return `<li>${g}</li>`;
       return `<li><strong>${g.name}</strong> (${g.points}p) ${g.note ? ` — ${g.note}` : ''}</li>`;
     }).join('') || '<li>(Không có)</li>'}</ul>
@@ -848,6 +951,11 @@ loadSubjects().then(() => {
         if (form) form.reset();
         const originalId = document.getElementById('original_id');
         if (originalId) originalId.value = '';
+        // reset dynamic lists
+        const reqContainer = document.getElementById('requirements-list');
+        if (reqContainer) { reqContainer.innerHTML = ''; addRequirementField(reqContainer, ''); }
+        const gradeContainer = document.getElementById('grading-list');
+        if (gradeContainer) { gradeContainer.innerHTML = ''; addGradingField(gradeContainer, { name: '', points: 0, note: '' }); }
         const modal = document.getElementById('exercise-modal');
         if (modal) modal.classList.add('show');
       };
@@ -872,20 +980,40 @@ loadSubjects().then(() => {
     // Exercise form submit
     const exerciseForm = document.getElementById('exercise-form');
     if (exerciseForm) {
-      exerciseForm.onsubmit = async (e) => {
-        e.preventDefault();
-        const formEl = e.target;
-        const fd = new FormData(formEl);
-        const orig = fd.get('original_id');
-        const exercise = {
-          id: fd.get('id'),
-          title: fd.get('title'),
-          difficulty: fd.get('difficulty'),
-          description: fd.get('description'),
-          requirements: (fd.get('requirements')||'').split('\n').map(s=>s.trim()).filter(Boolean),
-          grading_criteria: parseCriteriaText(fd.get('grading_criteria')||''),
-          submission_format: fd.get('submission_format')
-        };
+        exerciseForm.onsubmit = async (e) => {
+          e.preventDefault();
+          const formEl = e.target;
+          const fd = new FormData(formEl);
+          const orig = fd.get('original_id');
+          // read requirements from dynamic list if present, fallback to textarea value
+          const requirements = (function() {
+            const rows = Array.from(formEl.querySelectorAll('.req-row input'));
+            if (rows.length) return rows.map(i=>i.value.trim()).filter(Boolean);
+            return (fd.get('requirements')||'').split('\n').map(s=>s.trim()).filter(Boolean);
+          })();
+
+          const grading_criteria = (function(){
+            const rows = Array.from(formEl.querySelectorAll('.grade-row'));
+            if (rows.length) return rows.map(r=>{
+              const name = (r.querySelector('.grade-name')||{value:''}).value.trim();
+              const points = (r.querySelector('.grade-points')||{value:''}).value.trim();
+              const note = (r.querySelector('.grade-note')||{value:''}).value.trim();
+              if (!name) return null;
+              return { name, points: points?Number(points):0, note };
+            }).filter(Boolean);
+            // fallback: parse free text
+            return parseCriteriaText(fd.get('grading_criteria')||'');
+          })();
+
+          const exercise = {
+            id: fd.get('id'),
+            title: fd.get('title'),
+            difficulty: fd.get('difficulty'),
+            description: fd.get('description'),
+            requirements,
+            grading_criteria,
+            submission_format: fd.get('submission_format')
+          };
         const multipart = new FormData();
         multipart.append('exercise', JSON.stringify(exercise));
         const fileInput = formEl.querySelector('input[type=file]');
@@ -912,6 +1040,12 @@ loadSubjects().then(() => {
           if (modal) modal.classList.remove('show');
         } catch (err) { console.error(err); alert('Lỗi lưu bài tập'); }
       };
+
+    // setup add/remove handlers for dynamic lists
+    const reqAdd = document.getElementById('req-add');
+    if (reqAdd) reqAdd.onclick = () => { const c = document.getElementById('requirements-list'); if (c) addRequirementField(c, ''); };
+    const gradeAdd = document.getElementById('grade-add');
+    if (gradeAdd) gradeAdd.onclick = () => { const c = document.getElementById('grading-list'); if (c) addGradingField(c, { name: '', points: 0, note: '' }); };
     }
   }
 }).catch(err=>console.error(err));

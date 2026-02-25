@@ -29,10 +29,10 @@ body{font-family:var(--font);margin:0;background:var(--bg);color:var(--text)}
 .exercise-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
 .badge{background:#f3f3f3;padding:6px 10px;border-radius:12px;font-size:13px}
 
-/* difficulty colors */
-.badge.easy{background:#e6f4ea;color:#0b6f3a;border:1px solid #cdeed0}
-.badge.medium{background:#fff4e5;color:#b45f00;border:1px solid #ffe2b8}
-.badge.hard{background:#fdecea;color:#a31f1f;border:1px solid #f6c8c8}
+/* difficulty colors - stronger/darker backgrounds for better contrast */
+.badge.easy, .badge-easy{background:#2e7d32;color:#fff;border:1px solid #25692b}
+.badge.medium, .badge-medium{background:#ff9800;color:#fff;border:1px solid #e07a00}
+.badge.hard, .badge-hard{background:#c62828;color:#fff;border:1px solid #a51f1f}
 
 /* ensure primary and accent used for headings and buttons */
 .brand{color:var(--primary)}
