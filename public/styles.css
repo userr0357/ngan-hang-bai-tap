@@ -63,12 +63,29 @@ h1, h2, h3 {font-family:var(--font);color:var(--primary)}
 #theme-toggle{background:transparent;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
 
 /* dark mode */
-body.dark-mode{background:#0f1724;color:#e6eef8}
-body.dark-mode .sidebar{background:#0b1220;color:#cfe0ff;border-right:1px solid #111827}
-body.dark-mode .form-card, body.dark-mode .exercise-card, body.dark-mode .card, body.dark-mode .modal-content{background:#0b1220;color:#e6eef8;border:1px solid #1f2937}
-body.dark-mode .exercise-desc, body.dark-mode .small{color:#cbd5e1}
-body.dark-mode .badge{background:#111827;color:#e6eef8}
-body.dark-mode .accent{background:var(--accent);color:#fff}
+/* dark mode */
+body.dark-mode{
+  --bg: #0f1724;
+  --card: #0b1220;
+  --text: #e6eef8;
+  --muted: #cbd5e1;
+  --border: #1f2937;
+  --primary: #8ab4ff;
+  --accent: #ffb366;
+  background:var(--bg);
+  color:var(--text);
+}
+body.dark-mode .sidebar{background:var(--card);color:var(--muted);border-right:1px solid #111827}
+body.dark-mode .form-card, body.dark-mode .exercise-card, body.dark-mode .card, body.dark-mode .modal-content{background:var(--card);color:var(--text);border:1px solid var(--border)}
+body.dark-mode .exercise-desc, body.dark-mode .small{color:var(--muted)}
+body.dark-mode .badge{background:#111827;color:var(--text)}
+body.dark-mode .accent{background:var(--accent);color:#061018}
+
+/* ensure specific elements use variable colors for high contrast */
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode .brand { color: var(--primary); }
+body.dark-mode .modal-close, body.dark-mode .modal-close-text { color: var(--muted); }
+body.dark-mode .sidebar li { color: var(--muted); }
+body.dark-mode .sidebar li.active { background: var(--primary); color: #001428; }
 .card{background:var(--card);padding:16px;border-radius:8px;border:1px solid #e6e9ee}
 .hidden{display:none}
 .accent{background:var(--accent);color:#fff;padding:8px 12px;border:none;border-radius:6px;cursor:pointer}
