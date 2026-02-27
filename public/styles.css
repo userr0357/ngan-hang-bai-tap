@@ -86,6 +86,20 @@ body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode .brand {
 body.dark-mode .modal-close, body.dark-mode .modal-close-text { color: var(--muted); }
 body.dark-mode .sidebar li { color: var(--muted); }
 body.dark-mode .sidebar li.active { background: var(--primary); color: #001428; }
+
+/* Overrides for styles declared in lecturer.html and index.html */
+body.dark-mode .small-muted { color: var(--muted) !important; }
+body.dark-mode .subject-header { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03); }
+body.dark-mode .subject-header:hover { background: rgba(255,255,255,0.03); }
+body.dark-mode .subject-count { color: var(--muted) !important; }
+body.dark-mode .exercise-item { background: var(--card); border-color: var(--border); color: var(--text); }
+body.dark-mode .exercise-item:hover { background: rgba(255,255,255,0.02); box-shadow: none; }
+body.dark-mode .exercise-controls button { background: transparent; border-color: rgba(255,255,255,0.03); color: var(--muted); }
+body.dark-mode .exercise-controls .edit { color: #82cfff; }
+body.dark-mode .exercise-controls .delete { color: #ff8b8b; }
+body.dark-mode .modal-content { background: var(--card); color: var(--text); }
+body.dark-mode .subject-exercises .exercise-title, body.dark-mode .exercise-title { color: var(--text); }
+body.dark-mode .subject-title { color: var(--primary); }
 .card{background:var(--card);padding:16px;border-radius:8px;border:1px solid #e6e9ee}
 .hidden{display:none}
 .accent{background:var(--accent);color:#fff;padding:8px 12px;border:none;border-radius:6px;cursor:pointer}
