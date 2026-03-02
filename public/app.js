@@ -565,6 +565,8 @@ if (filterDiff) filterDiff.addEventListener('change', (e) => {
   state.difficultyFilter = e.target.value;
   state.currentPage = 1;
   renderSubject();
+  // if on lecturer/manage page, update that view too
+  try { renderManageList(); } catch (err) {}
 });
 
 if (modalClose) modalClose.addEventListener('click', () => {
@@ -782,7 +784,19 @@ function renderManageList() {
       table.appendChild(thead);
       
       const tbody = document.createElement('tbody');
-      f.exercises.forEach(ex => {
+      // apply difficulty filter and searchQuery for lecturer manage view
+      const filteredExercises = (f.exercises || []).filter(ex => {
+        if (state.difficultyFilter && ex.difficulty !== state.difficultyFilter) return false;
+        if (state.searchQuery) {
+          const q = state.searchQuery.toLowerCase();
+          const inTitle = ex.title && ex.title.toLowerCase().includes(q);
+          const inId = ex.id && ex.id.toLowerCase().includes(q);
+          if (!inTitle && !inId) return false;
+        }
+        return true;
+      });
+
+      filteredExercises.forEach(ex => {
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid #ddd';
         row.style.cursor = 'pointer';
@@ -975,6 +989,15 @@ loadSubjects().then(() => {
         const modal = document.getElementById('exercise-modal');
         if (modal) modal.classList.remove('show');
       };
+    }
+
+    // wire lecturer page search box to filter management list
+    const searchBoxLocal = document.getElementById('search-box');
+    if (searchBoxLocal) {
+      searchBoxLocal.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        renderManageList();
+      });
     }
     
     // Exercise form submit
