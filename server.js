@@ -116,7 +116,28 @@ const USE_EXTERNAL_DB = process.env.USE_EXTERNAL_DB === '1' || !!process.env.DB_
 const _weightsCache = { ts: 0, ttl: 1000 * 60 * 5, data: null };
 
 async function loadWeightsFromSql() {
-  if (!USE_EXTERNAL_DB) return [];
+  if (!USE_EXTERNAL_DB) {
+    // if external DB usage not enabled, try to load local snapshot file if present
+    try {
+      const p = path.join(__dirname, 'tieuchi_check.json');
+      if (fs.existsSync(p)) {
+        const arr = JSON.parse(fs.readFileSync(p, 'utf8'));
+        const mapLocal = {};
+        for (const row of arr) {
+          const key = String(row.MaDangBai || '').trim();
+          if (!mapLocal[key]) mapLocal[key] = [];
+          mapLocal[key].push({ id: row.Id, name: row.TenTieuChi, order: row.ThuTu, points: row.TrongSo });
+        }
+        for (const k of Object.keys(mapLocal)) mapLocal[k].sort((a,b)=> (a.order||0)-(b.order||0));
+        _weightsCache.ts = Date.now();
+        _weightsCache.data = mapLocal;
+        return mapLocal;
+      }
+    } catch (e) {
+      console.warn('loadWeightsFromLocal error', e && e.message ? e.message : e);
+    }
+    return {};
+  }
   const now = Date.now();
   if (_weightsCache.data && (now - _weightsCache.ts) < _weightsCache.ttl) return _weightsCache.data;
 
@@ -151,6 +172,23 @@ async function loadWeightsFromSql() {
   } catch (err) {
     console.warn('loadWeightsFromSql error', err && err.message ? err.message : err);
     try { await mssql.close(); } catch(e){}
+    // fallback to local snapshot if available
+    try {
+      const p = path.join(__dirname, 'tieuchi_check.json');
+      if (fs.existsSync(p)) {
+        const arr = JSON.parse(fs.readFileSync(p, 'utf8'));
+        const mapLocal = {};
+        for (const row of arr) {
+          const key = String(row.MaDangBai || '').trim();
+          if (!mapLocal[key]) mapLocal[key] = [];
+          mapLocal[key].push({ id: row.Id, name: row.TenTieuChi, order: row.ThuTu, points: row.TrongSo });
+        }
+        for (const k of Object.keys(mapLocal)) mapLocal[k].sort((a,b)=> (a.order||0)-(b.order||0));
+        _weightsCache.ts = Date.now();
+        _weightsCache.data = mapLocal;
+        return mapLocal;
+      }
+    } catch (e) { console.warn('fallback local load error', e && e.message ? e.message : e); }
     return {};
   }
 }
