@@ -115,6 +115,11 @@ const diffOrder = { 'Dễ': 0, 'Trung bình': 1, 'Khó': 2, 'De': 0, 'Trung binh
 const USE_EXTERNAL_DB = process.env.USE_EXTERNAL_DB === '1' || !!process.env.DB_HOST;
 const _weightsCache = { ts: 0, ttl: 1000 * 60 * 5, data: null };
 
+// feature flag + cache for merged subjects endpoint
+const ENABLE_SUBJECTS_WITH_WEIGHTS = process.env.ENABLE_SUBJECTS_WITH_WEIGHTS !== '0';
+const SUBJECTS_WITH_WEIGHTS_TTL = Number(process.env.SUBJECTS_WITH_WEIGHTS_TTL_MS) || 60 * 1000;
+const _subjectsWithWeightsCache = { ts: 0, ttl: SUBJECTS_WITH_WEIGHTS_TTL, data: null };
+
 async function loadWeightsFromSql() {
   if (!USE_EXTERNAL_DB) {
     // if external DB usage not enabled, try to load local snapshot file if present
@@ -266,10 +271,12 @@ function mergeWeightsIntoSubjectsCopy(dbCopy, weightsMap) {
 app.get('/api/subjects', async (req, res) => {
   try {
     const db = readDB();
-    if (!USE_EXTERNAL_DB) return res.json(db);
+    // Always attempt to load weights (from external DB or local snapshot).
+    // If none found, return raw DB to avoid changing behavior.
     const weights = await loadWeightsFromSql();
+    if (!weights || Object.keys(weights).length === 0) return res.json(db);
     const copy = JSON.parse(JSON.stringify(db));
-    const merged = mergeWeightsIntoSubjectsCopy(copy, weights || {});
+    const merged = mergeWeightsIntoSubjectsCopy(copy, weights);
     return res.json(merged);
   } catch (err) {
     console.warn('subjects merge error', err && err.message ? err.message : err);
@@ -282,10 +289,11 @@ app.get('/api/subject/:id', async (req, res) => {
     const db = readDB();
     const sub = db.find(s => s.subject_id === req.params.id);
     if (!sub) return res.status(404).json({ error: 'Not found' });
-    if (!USE_EXTERNAL_DB) return res.json(sub);
+    // Try to load weights (external DB or local snapshot). If none, return raw subject.
     const weights = await loadWeightsFromSql();
+    if (!weights || Object.keys(weights).length === 0) return res.json(sub);
     const copy = JSON.parse(JSON.stringify(sub));
-    const merged = mergeWeightsIntoSubjectsCopy([copy], weights || {});
+    const merged = mergeWeightsIntoSubjectsCopy([copy], weights);
     return res.json(merged[0]);
   } catch (err) {
     console.warn('subject merge error', err && err.message ? err.message : err);
@@ -293,6 +301,35 @@ app.get('/api/subject/:id', async (req, res) => {
     const sub = db.find(s => s.subject_id === req.params.id);
     if (!sub) return res.status(404).json({ error: 'Not found' });
     return res.json(sub);
+  }
+});
+
+// merged subjects endpoint (read-only merge of weights into subjects)
+app.get('/api/subjects-with-weights', async (req, res) => {
+  if (!ENABLE_SUBJECTS_WITH_WEIGHTS) return res.status(404).json({ error: 'Not enabled' });
+  try {
+    const now = Date.now();
+    if (_subjectsWithWeightsCache.data && (now - _subjectsWithWeightsCache.ts) < _subjectsWithWeightsCache.ttl) {
+      return res.json(_subjectsWithWeightsCache.data);
+    }
+
+    const db = readDB();
+    const weights = await loadWeightsFromSql();
+
+    let out;
+    if (!weights || Object.keys(weights).length === 0) {
+      out = db; // no weights available, return raw DB
+    } else {
+      const copy = JSON.parse(JSON.stringify(db));
+      out = mergeWeightsIntoSubjectsCopy(copy, weights);
+    }
+
+    _subjectsWithWeightsCache.data = out;
+    _subjectsWithWeightsCache.ts = Date.now();
+    return res.json(out);
+  } catch (err) {
+    console.warn('/api/subjects-with-weights error', err && err.message ? err.message : err);
+    return res.status(500).json(readDB());
   }
 });
 
