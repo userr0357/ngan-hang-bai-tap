@@ -5,9 +5,7 @@ const cors = require('cors');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
 const jwt = require('jsonwebtoken');
-const sql = require('mssql');
-
-console.log('[init] Dependencies loaded');
+const mssql = require('mssql');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-to-secure-secret';
 
@@ -111,323 +109,196 @@ function readLecturers() {
 // difficulty rules
 const diffOrder = { 'Dễ': 0, 'Trung bình': 1, 'Khó': 2, 'De': 0, 'Trung binh': 1, 'KHo': 2 };
 
-// =========================
-// External MSSQL config
-// =========================
-const sqlConfig = {
-  user: process.env.DB_USER || 'userPersonalizedSystem',
-  password: process.env.DB_PASS || '123456789',
-  server: process.env.DB_HOST || '118.69.126.49',
-  database: process.env.DB_NAME || 'Data_PersonalizedSystem',
-  options: {
-    encrypt: false,
-    enableArithAbort: true
-  }
-};
+// ==================================================
+// EXTERNAL DB (weights) HELPERS - optional, feature-flagged
+// ==================================================
+const USE_EXTERNAL_DB = process.env.USE_EXTERNAL_DB === '1' || !!process.env.DB_HOST;
+const _weightsCache = { ts: 0, ttl: 1000 * 60 * 5, data: null };
 
-async function queryExternalExercises(prefix) {
-  // Only attempt external DB connection when USE_EXTERNAL_DB is explicitly set to '1'
-  if (String(process.env.USE_EXTERNAL_DB) !== '1') {
-    return [];
-  }
-  
+async function loadWeightsFromSql() {
+  if (!USE_EXTERNAL_DB) return [];
+  const now = Date.now();
+  if (_weightsCache.data && (now - _weightsCache.ts) < _weightsCache.ttl) return _weightsCache.data;
+
+  const config = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    server: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT || 1433),
+    options: { encrypt: false, trustServerCertificate: true },
+    pool: { max: 5, min: 0, idleTimeoutMillis: 30000 }
+  };
+
   try {
-    const pool = await sql.connect(sqlConfig);
-    try {
-      const req = pool.request();
-      // Query BAITAP with optional joins to lookup labels
-      // Map results to a normalized shape used by frontend
-      let q = `SELECT b.Id, b.MaBaiTap, b.TenBaiTap, b.MaDoKho, d.TenDoKho AS DoKho, b.MaDangBai, b.MaDinhDang, dn.TenDinhDang AS DinhDang, b.MoTa, b.YeuCau, b.TieuChiChamDiem, b.MaMon
-                 FROM dbo.BAITAP b
-                 LEFT JOIN dbo.DOKHO d ON b.MaDoKho = d.MaDoKho
-                 LEFT JOIN dbo.DINHDANG_NOPBAI dn ON b.MaDinhDang = dn.MaDinhDang`;
+    await mssql.connect(config);
+    const req = new mssql.Request();
+    const q = `SELECT Id, MaDangBai, TenTieuChi, ThuTu, TrongSo FROM TIEUCHI_DANGBAI ORDER BY MaDangBai, ThuTu`;
+    const r = await req.query(q);
+    const rows = r.recordset || [];
+    // build map by MaDangBai
+    const map = {};
+    for (const row of rows) {
+      const key = String(row.MaDangBai || row.MaDangBai === 0 ? row.MaDangBai : '').trim();
+      if (!map[key]) map[key] = [];
+      map[key].push({ id: row.Id, name: row.TenTieuChi, order: row.ThuTu, points: row.TrongSo });
+    }
+    // ensure order
+    for (const k of Object.keys(map)) map[k].sort((a,b)=> (a.order||0)-(b.order||0));
+    _weightsCache.ts = Date.now();
+    _weightsCache.data = map;
+    return map;
+  } catch (err) {
+    console.warn('loadWeightsFromSql error', err && err.message ? err.message : err);
+    try { await mssql.close(); } catch(e){}
+    return {};
+  }
+}
 
-      if (prefix) {
-        req.input('prefix', sql.NVarChar, prefix + '%');
-        q += ' WHERE b.MaBaiTap LIKE @prefix';
+function normalizeCriteriaServer(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.flatMap(g => {
+      if (typeof g === 'string') return [{ name: g, points: 0 }];
+      if (typeof g === 'object') {
+        if (g.tieu_chi && Array.isArray(g.tieu_chi)) return g.tieu_chi.map(s => ({ name: s, points: 0 }));
+        return [{ name: g.name || g.tieu_chi || '(Không tên)', points: g.points || 0 }];
       }
-      q += ' ORDER BY b.Id';
-
-      const r = await req.query(q);
-      // normalize
-      return r.recordset.map(row => {
-        // parse tieu chi if it's JSON-like
-        let grading = row.TieuChiChamDiem;
-        try {
-          if (grading && typeof grading === 'string') {
-            grading = JSON.parse(grading);
-          }
-        } catch (e) {
-          // leave as-is
-        }
-
-        // if MaMon is empty, extract from MaBaiTap prefix (e.g. NMLT_D1_01 -> NMLT)
-        let subjectCode = row.MaMon;
-        if (!subjectCode || subjectCode.trim() === '') {
-          const match = (row.MaBaiTap || '').match(/^([A-Z]+)/);
-          subjectCode = match ? match[1] : 'EXTERNAL';
-      }
-
-      // normalize requirements to array
-      const reqs = Array.isArray(row.YeuCau) ? row.YeuCau : (row.YeuCau ? [row.YeuCau] : []);
-      // grading may be stored as JSON object { tieu_chi: [...] } or as an array/string
-      let gradingCriteria = [];
-      if (grading) {
-        if (Array.isArray(grading)) gradingCriteria = grading;
-        else if (grading.tieu_chi && Array.isArray(grading.tieu_chi)) gradingCriteria = grading.tieu_chi;
-        else if (grading.tieu_chi) gradingCriteria = [grading.tieu_chi];
-        else if (typeof grading === 'string') {
-          try {
-            const parsed = JSON.parse(grading);
-            if (Array.isArray(parsed)) gradingCriteria = parsed;
-            else if (parsed && parsed.tieu_chi && Array.isArray(parsed.tieu_chi)) gradingCriteria = parsed.tieu_chi;
-            else if (parsed && parsed.tieu_chi) gradingCriteria = [parsed.tieu_chi];
-          } catch (e) {
-            gradingCriteria = [grading];
-          }
-        }
-      }
-
-      return {
-        id: row.MaBaiTap || String(row.Id),
-        title: row.TenBaiTap,
-        difficulty: row.DoKho || row.MaDoKho,
-        description: row.MoTa,
-        requirements: reqs,
-        grading_criteria: gradingCriteria,
-        submission_format: row.DinhDang || row.MaDinhDang,
-        subject_code: subjectCode
-      };
+      return [{ name: String(g), points: 0 }];
     });
-    } finally {
-      // pool is reused by mssql
-    }
-  } catch (err) {
-    console.error('MSSQL query error:', err.message);
+  }
+  if (typeof raw === 'object') {
+    if (raw.tieu_chi && Array.isArray(raw.tieu_chi)) return raw.tieu_chi.map(s => ({ name: s, points: 0 }));
+    if (raw.name) return [{ name: raw.name, points: raw.points || 0 }];
     return [];
   }
+  return [];
 }
 
-// SQL write helpers (INSERT/UPDATE/DELETE BAITAP)
-async function insertExerciseToSQL(exercise, subjectCode) {
-  try {
-    const pool = await sql.connect(sqlConfig);
-    try {
-      // Helper: resolve code by name from table
-      async function resolveCode(table, codeCol, nameCol, val) {
-        if (!val) return null;
-        const n = Number(val);
-        if (Number.isInteger(n)) return n;
-        try {
-          const r = await pool.request().input('val', sql.NVarChar, String(val)).query(
-            `SELECT TOP 1 ${codeCol} AS code FROM dbo.${table} WHERE ${nameCol} = @val OR ${nameCol} LIKE '%' + @val + '%'`
-          );
-          if (r && r.recordset && r.recordset.length) {
-            const code = r.recordset[0].code;
-            const cnum = Number(code);
-            return Number.isInteger(cnum) ? cnum : null;
+function mergeWeightsIntoSubjectsCopy(dbCopy, weightsMap) {
+  if (!dbCopy || !Array.isArray(dbCopy)) return dbCopy;
+  for (const subject of dbCopy) {
+    if (!subject.forms) continue;
+    for (const form of subject.forms) {
+      const formKey = String(form.form_id || '').trim();
+      const weights = weightsMap && weightsMap[formKey] ? weightsMap[formKey] : null;
+      // normalize form-level criteria first
+      form.grading_criteria = normalizeCriteriaServer(form.grading_criteria || []);
+      if (weights && weights.length && (!form.grading_criteria || !form.grading_criteria.length)) {
+        // if form has no criteria, populate from weights
+        form.grading_criteria = weights.map(w => ({ name: w.name || '', points: w.points || 0 }));
+      } else if (weights && weights.length && form.grading_criteria.length) {
+        // try to merge by index
+        const merged = form.grading_criteria.map((g, idx) => ({ name: g.name || '', points: (weights[idx] && weights[idx].points) ? weights[idx].points : (g.points || 0) }));
+        form.grading_criteria = merged;
+      }
+
+      // exercises
+      if (!form.exercises || !Array.isArray(form.exercises)) continue;
+      for (const ex of form.exercises) {
+        const norm = normalizeCriteriaServer(ex.grading_criteria || []);
+        if (weights && weights.length) {
+          if (norm.length === 0) {
+            // use weights as form-level criteria for this exercise
+            ex.grading_criteria = weights.map(w => ({ name: w.name || '', points: w.points || 0 }));
+          } else if (norm.length === weights.length) {
+            ex.grading_criteria = norm.map((g, idx) => ({ name: g.name || '', points: (weights[idx] && weights[idx].points) ? weights[idx].points : (g.points || 0) }));
+          } else {
+            // lengths differ: attempt positional merge up to min length, keep remaining names with 0 points
+            const minL = Math.min(norm.length, weights.length);
+            const merged = [];
+            for (let i=0;i<minL;i++) merged.push({ name: norm[i].name || weights[i].name || '', points: weights[i].points || (norm[i].points||0) });
+            if (norm.length > minL) for (let i=minL;i<norm.length;i++) merged.push({ name: norm[i].name || '', points: norm[i].points || 0 });
+            else if (weights.length > minL) for (let i=minL;i<weights.length;i++) merged.push({ name: weights[i].name || '', points: weights[i].points || 0 });
+            ex.grading_criteria = merged;
           }
-        } catch (e) {
-          // ignore and return null
+        } else {
+          // no weights available; keep normalized criteria
+          ex.grading_criteria = norm;
         }
-        return null;
       }
-      const req = pool.request();
-      req.input('MaBaiTap', sql.NVarChar, exercise.id);
-      req.input('TenBaiTap', sql.NVarChar, exercise.title || '');
-      req.input('MaMon', sql.NVarChar, subjectCode || '');
-      req.input('MoTa', sql.NVarChar, exercise.description || '');
-      req.input('YeuCau', sql.NVarChar, Array.isArray(exercise.requirements) ? exercise.requirements.join('\n') : '');
-      req.input('TieuChiChamDiem', sql.NVarChar, JSON.stringify(exercise.grading_criteria || []));
-      // Resolve MaDinhDang and MaDoKho codes from human-readable values when necessary
-      let md = await resolveCode('DINHDANG_NOPBAI', 'MaDinhDang', 'TenDinhDang', exercise.submission_format);
-      let mk = await resolveCode('DOKHO', 'MaDoKho', 'TenDoKho', exercise.difficulty);
-      // if mapping failed, pick a safe default (first available code) to avoid NULL inserts
-      if (md == null) {
-        try {
-          const r = await pool.request().query('SELECT TOP 1 MaDinhDang AS code FROM dbo.DINHDANG_NOPBAI');
-          if (r && r.recordset && r.recordset.length) md = Number(r.recordset[0].code) || null;
-        } catch (e) { md = null; }
-      }
-      if (mk == null) {
-        try {
-          const r2 = await pool.request().query('SELECT TOP 1 MaDoKho AS code FROM dbo.DOKHO');
-          if (r2 && r2.recordset && r2.recordset.length) mk = Number(r2.recordset[0].code) || null;
-        } catch (e) { mk = null; }
-      }
-      req.input('MaDinhDang', sql.Int, md);
-      req.input('MaDoKho', sql.Int, mk);
-      
-      const q = `INSERT INTO dbo.BAITAP (MaBaiTap, TenBaiTap, MaMon, MoTa, YeuCau, TieuChiChamDiem, MaDinhDang, MaDoKho)
-                 VALUES (@MaBaiTap, @TenBaiTap, @MaMon, @MoTa, @YeuCau, @TieuChiChamDiem, @MaDinhDang, @MaDoKho)`;
-      await req.query(q);
-      return true;
-    } finally {
-      await sql.close();
     }
-  } catch (err) {
-    console.error('SQL INSERT failed:', err.message);
-    return false;
   }
-}
-
-async function updateExerciseInSQL(exercise, subjectCode) {
-  try {
-    const pool = await sql.connect(sqlConfig);
-    try {
-      // Helper: resolve code by name from table
-      async function resolveCode(table, codeCol, nameCol, val) {
-        if (!val) return null;
-        const n = Number(val);
-        if (Number.isInteger(n)) return n;
-        try {
-          const r = await pool.request().input('val', sql.NVarChar, String(val)).query(
-            `SELECT TOP 1 ${codeCol} AS code FROM dbo.${table} WHERE ${nameCol} = @val OR ${nameCol} LIKE '%' + @val + '%'`
-          );
-          if (r && r.recordset && r.recordset.length) {
-            const code = r.recordset[0].code;
-            const cnum = Number(code);
-            return Number.isInteger(cnum) ? cnum : null;
-          }
-        } catch (e) {
-          console.error('[debug] resolveCode error for', table, val, e.message);
-        }
-        return null;
-      }
-
-      const req = pool.request();
-      req.input('MaBaiTap', sql.NVarChar, exercise.id);
-      req.input('TenBaiTap', sql.NVarChar, exercise.title || '');
-      req.input('MaMon', sql.NVarChar, subjectCode || '');
-      req.input('MoTa', sql.NVarChar, exercise.description || '');
-      req.input('YeuCau', sql.NVarChar, Array.isArray(exercise.requirements) ? exercise.requirements.join('\n') : '');
-      req.input('TieuChiChamDiem', sql.NVarChar, JSON.stringify(exercise.grading_criteria || []));
-
-      const md = await resolveCode('DINHDANG_NOPBAI', 'MaDinhDang', 'TenDinhDang', exercise.submission_format);
-      const mk = await resolveCode('DOKHO', 'MaDoKho', 'TenDoKho', exercise.difficulty);
-      req.input('MaDinhDang', sql.Int, md);
-      req.input('MaDoKho', sql.Int, mk);
-
-      const q = `UPDATE dbo.BAITAP SET TenBaiTap=@TenBaiTap, MaMon=@MaMon, MoTa=@MoTa, YeuCau=@YeuCau, TieuChiChamDiem=@TieuChiChamDiem, MaDinhDang=@MaDinhDang, MaDoKho=@MaDoKho
-                 WHERE MaBaiTap=@MaBaiTap`;
-      await req.query(q);
-      return true;
-    } finally {
-      await sql.close();
-    }
-  } catch (err) {
-    console.error('SQL UPDATE failed:', err.message);
-    return false;
-  }
-}
-
-async function deleteExerciseFromSQL(exerciseId) {
-  const pool = await sql.connect(sqlConfig);
-  try {
-    const req = pool.request();
-    req.input('MaBaiTap', sql.NVarChar, exerciseId);
-    const q = `DELETE FROM dbo.BAITAP WHERE MaBaiTap=@MaBaiTap`;
-    await req.query(q);
-    return true;
-  } catch (err) {
-    console.error('SQL DELETE failed:', err.message);
-    return false;
-  }
+  return dbCopy;
 }
 
 // ==================================================
 //  ROUTES
 // ==================================================
-async function buildSubjectsFromExternal(prefix) {
-  const rows = await queryExternalExercises(prefix);
-  console.log('[debug] Rows from external DB:', rows.length);
-  const subjects = {};
-
-  for (const r of rows) {
-    const subjId = r.subject_code || 'EXTERNAL';
-    if (!subjects[subjId]) {
-      subjects[subjId] = { subject_id: subjId, subject_name: subjId, description: '', total_exercises: 0, forms: [] };
-    }
-
-    const subject = subjects[subjId];
-
-    const formId = r.submission_format || 'default';
-    let form = subject.forms.find(f => f.form_id === formId);
-    if (!form) {
-      form = { form_id: formId, name: formId, difficulty: r.difficulty || '', exercise_count: 0, grading_criteria: [], exercises: [] };
-      subject.forms.push(form);
-    }
-
-    const ex = {
-      id: r.id,
-      title: r.title || '',
-      difficulty: r.difficulty || '',
-      description: r.description || '',
-      requirements: Array.isArray(r.requirements) ? r.requirements : (r.requirements ? [r.requirements] : []),
-      grading_criteria: r.grading_criteria || { tieu_chi: [] },
-      submission_format: r.submission_format || ''
-    };
-
-    form.exercises.push(ex);
-  }
-
-  // finalize counts and sort
-  const out = Object.values(subjects);
-  console.log('[debug] Built subjects:', out.length, 'with exercises:', out.map(s => s.forms.map(f => f.exercises.length)));
-  out.forEach(sub => {
-    sub.forms.forEach(f => { f.exercise_count = f.exercises.length; });
-    sub.total_exercises = sub.forms.reduce((s, f) => s + (f.exercise_count || 0), 0);
-  });
-
-  return out;
-}
-
 app.get('/api/subjects', async (req, res) => {
-  // if USE_EXTERNAL_DB set, return subjects built from external DB
-  const useExternal = (process.env.USE_EXTERNAL_DB || '').toLowerCase() === '1' || (process.env.USE_EXTERNAL_DB || '').toLowerCase() === 'true';
-  if (useExternal) {
-    try {
-      const prefix = req.query.prefix; // optional
-      const subjects = await buildSubjectsFromExternal(prefix);
-      return res.json(subjects);
-    } catch (err) {
-      console.error('Error building subjects from external DB', err);
-      return res.status(500).json({ error: 'Failed to load external subjects', detail: err.message });
-    }
+  try {
+    const db = readDB();
+    if (!USE_EXTERNAL_DB) return res.json(db);
+    const weights = await loadWeightsFromSql();
+    const copy = JSON.parse(JSON.stringify(db));
+    const merged = mergeWeightsIntoSubjectsCopy(copy, weights || {});
+    return res.json(merged);
+  } catch (err) {
+    console.warn('subjects merge error', err && err.message ? err.message : err);
+    return res.json(readDB());
   }
-
-  res.json(readDB());
 });
 
-app.get('/api/subject/:id', (req, res) => {
-  const db = readDB();
-  const sub = db.find(s => s.subject_id === req.params.id);
-  if (!sub) return res.status(404).json({ error: 'Not found' });
-  res.json(sub);
+app.get('/api/subject/:id', async (req, res) => {
+  try {
+    const db = readDB();
+    const sub = db.find(s => s.subject_id === req.params.id);
+    if (!sub) return res.status(404).json({ error: 'Not found' });
+    if (!USE_EXTERNAL_DB) return res.json(sub);
+    const weights = await loadWeightsFromSql();
+    const copy = JSON.parse(JSON.stringify(sub));
+    const merged = mergeWeightsIntoSubjectsCopy([copy], weights || {});
+    return res.json(merged[0]);
+  } catch (err) {
+    console.warn('subject merge error', err && err.message ? err.message : err);
+    const db = readDB();
+    const sub = db.find(s => s.subject_id === req.params.id);
+    if (!sub) return res.status(404).json({ error: 'Not found' });
+    return res.json(sub);
+  }
+});
+
+// admin dry-run report: list forms with weights found and counts
+app.get('/api/admin/weights-match-report', auth, async (req, res) => {
+  try {
+    const db = readDB();
+    const weights = await loadWeightsFromSql();
+    const report = [];
+    for (const subject of db) {
+      for (const form of subject.forms || []) {
+        const key = String(form.form_id || '').trim();
+        const w = weights && weights[key] ? weights[key] : [];
+        const formNorm = normalizeCriteriaServer(form.grading_criteria || []);
+        report.push({ subject_id: subject.subject_id, form_id: form.form_id, form_name: form.name, weights_count: (w||[]).length, form_criteria_count: (formNorm||[]).length });
+      }
+    }
+    res.json({ success: true, use_external_db: !!USE_EXTERNAL_DB, report });
+  } catch (err) {
+    console.error('weights-match-report error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // ==================================================
 //  LOGIN (SET COOKIE TOKEN)
 // ==================================================
 app.post('/api/lecturer/login', (req, res) => {
-  let { name, password, lecturer_id } = req.body || {};
-  name = typeof name === 'string' ? name.trim() : '';
-  password = typeof password === 'string' ? password.trim() : '';
-  lecturer_id = typeof lecturer_id === 'string' ? lecturer_id.trim() : '';
-
+  const { name, password, lecturer_id } = req.body;
   const lecturers = readLecturers();
 
-  // Match by lecturer_id + password primarily. Accept name mismatch to avoid whitespace/casing issues.
-  let found = lecturers.find(l => l.lecturer_id === lecturer_id && l.password === password);
-  // fallback: if no match by id+password, try exact match including name (legacy)
+  // Allow login by lecturer_id + password. If client provided a name, prefer server's stored name.
+  const found = lecturers.find(l => l.lecturer_id === lecturer_id && l.password === password);
+
+  // legacy: if not found by id/password, try full match (name+id+password) for backward compatibility
   if (!found) {
-    found = lecturers.find(l => l.lecturer_id === lecturer_id && l.name === name && l.password === password);
+    const legacy = lecturers.find(l => l.lecturer_id === lecturer_id && l.name === name && l.password === password);
+    if (legacy) found = legacy;
   }
 
   if (!found) return res.status(401).json({ error: 'Invalid credentials' });
 
   const token = jwt.sign(
-    { lecturer_id: found.lecturer_id, name: found.name, is_admin: found.is_admin || false, allowed_subjects: found.allowed_subjects || [] },
+    { lecturer_id: found.lecturer_id, name: found.name },
     JWT_SECRET,
     { expiresIn: '8h' }
   );
@@ -441,7 +312,7 @@ app.post('/api/lecturer/login', (req, res) => {
   if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
 
   res.cookie('token', token, cookieOpts);
-  res.json({ success: true, lecturer: { lecturer_id: found.lecturer_id, name: found.name, is_admin: found.is_admin || false, allowed_subjects: found.allowed_subjects || [] } });
+  res.json({ success: true, lecturer: { lecturer_id: found.lecturer_id, name: found.name } });
 });
 
 // ==================================================
@@ -464,70 +335,31 @@ function auth(req, res, next) {
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     next();
-  } catch (err) {
+  } catch {
     res.status(401).json({ error: 'Invalid token' });
   }
-}
-
-// Middleware to check if user has permission for subject
-function checkSubjectPermission(req, res, next) {
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-  
-  const subjectId = req.body.subject_id || req.query.subject_id || req.params.subject_id;
-  if (!subjectId) return res.status(400).json({ error: 'No subject_id provided' });
-  
-  // admin can access all subjects
-  if (req.user.is_admin) return next();
-  
-  // check if subject is in allowed_subjects
-  if (!req.user.allowed_subjects || !req.user.allowed_subjects.includes(subjectId)) {
-    return res.status(403).json({ error: 'No permission for this subject' });
-  }
-  
-  next();
 }
 
 // ==================================================
 //  EXERCISE CRUD
 // ==================================================
-// NOTE: run multer `upload.array('files')` before `checkSubjectPermission` so
-// multipart/form-data fields (e.g. subject_id) are available to the permission
-// middleware. Previously the check ran before multer and `req.body` was empty.
-app.post('/api/exercise', auth, upload.array('files'), checkSubjectPermission, async (req, res) => {
+app.post('/api/exercise', auth, upload.array('files'), (req, res) => {
   try {
     const payload = req.body;
-    const useExternal = (process.env.USE_EXTERNAL_DB || '').toLowerCase() === '1' || (process.env.USE_EXTERNAL_DB || '').toLowerCase() === 'true';
+    const db = readDB();
 
-    let exercise;
+    const subject = db.find(s => s.subject_id === payload.subject_id);
+    if (!subject) return res.status(404).json({ error: 'Subject not found' });
+
+    const form = subject.forms.find(f => f.form_id === payload.form_id);
+    if (!form) return res.status(404).json({ error: 'Form not found' });
+
+    const exercise = JSON.parse(payload.exercise);
+
+    // record owner (lecturer) for permission checks
     try {
-      if (typeof payload.exercise === 'string') {
-        // try direct parse first
-        try {
-          exercise = JSON.parse(payload.exercise);
-        } catch (e) {
-          // attempt to clean common escaping issues (pragmatic fallback)
-          let s = payload.exercise.trim();
-          // remove stray backslashes before quotes
-          s = s.replace(/\\(\")/g, '"');
-          // remove other backslashes that may have been added by some clients
-          s = s.replace(/\\/g, '');
-          // convert single quotes to double quotes if present
-          if (s[0] === "'" && s[s.length-1] === "'") s = '"' + s.slice(1, -1).replace(/"/g, '\\"') + '"';
-          try {
-            exercise = JSON.parse(s);
-          } catch (e2) {
-            console.error('Failed to parse exercise payload (fallback):', payload.exercise, e2.message);
-            return res.status(400).json({ error: 'Invalid exercise payload' });
-          }
-        }
-      } else {
-        exercise = payload.exercise;
-      }
-    } catch (e) {
-      console.error('Failed to parse exercise payload unexpected error:', e.message);
-      return res.status(400).json({ error: 'Invalid exercise payload' });
-    }
-    const subjectId = payload.subject_id;
+      if (req.user && req.user.lecturer_id) exercise.owner = req.user.lecturer_id;
+    } catch (e) {}
 
     // add created_at timestamp for new exercises if not provided
     if (!exercise.created_at) exercise.created_at = new Date().toISOString();
@@ -541,37 +373,23 @@ app.post('/api/exercise', auth, upload.array('files'), checkSubjectPermission, a
       exercise.attached_files = exercise.attached_files || [];
     }
 
-    // If using external DB, also insert into SQL
-    if (useExternal) {
-      const ok = await insertExerciseToSQL(exercise, subjectId);
-      if (!ok) return res.status(500).json({ error: 'Failed to insert exercise into external DB' });
-    } else {
-      // Insert into local db.json
-      const db = readDB();
-      const subject = db.find(s => s.subject_id === subjectId);
-      if (!subject) return res.status(404).json({ error: 'Subject not found' });
+    form.exercises.push(exercise);
 
-      const form = subject.forms.find(f => f.form_id === payload.form_id);
-      if (!form) return res.status(404).json({ error: 'Form not found' });
+    form.exercises.sort((a, b) => {
+      const da = diffOrder[a.difficulty] ?? 1;
+      const dbb = diffOrder[b.difficulty] ?? 1;
+      if (da !== dbb) return da - dbb;
+      return (a.id || '').localeCompare(b.id || '');
+    });
 
-      form.exercises.push(exercise);
-      form.exercises.sort((a, b) => {
-        const da = diffOrder[a.difficulty] ?? 1;
-        const dbb = diffOrder[b.difficulty] ?? 1;
-        if (da !== dbb) return da - dbb;
-        return (a.id || '').localeCompare(b.id || '');
-      });
+    form.exercise_count = form.exercises.length;
+    subject.total_exercises = subject.forms.reduce(
+      (s, f) => s + (f.exercise_count || f.exercises.length || 0),
+      0
+    );
 
-      form.exercise_count = form.exercises.length;
-      subject.total_exercises = subject.forms.reduce(
-        (s, f) => s + (f.exercise_count || f.exercises.length || 0),
-        0
-      );
-
-      writeDB(db);
-    }
-
-    res.json({ success: true });
+    writeDB(db);
+    res.json({ success: true, subject });
 
   } catch (err) {
     console.error(err);
@@ -580,65 +398,59 @@ app.post('/api/exercise', auth, upload.array('files'), checkSubjectPermission, a
 });
 
 // update
-app.put('/api/exercise/:id', auth, upload.array('files'), checkSubjectPermission, async (req, res) => {
+app.put('/api/exercise/:id', auth, upload.array('files'), (req, res) => {
   try {
     const id = req.params.id;
-    const useExternal = (process.env.USE_EXTERNAL_DB || '').toLowerCase() === '1' || (process.env.USE_EXTERNAL_DB || '').toLowerCase() === 'true';
     const updated = req.body.exercise ? JSON.parse(req.body.exercise) : req.body;
-    const subjectId = req.body.subject_id;
 
-    if (useExternal) {
-      // Update SQL for external DB
-      const ok = await updateExerciseInSQL(updated, subjectId);
-      if (!ok) return res.status(500).json({ error: 'Failed to update exercise in external DB' });
-      return res.json({ success: true });
-    } else {
-      // Update local db.json
-      const db = readDB();
-      let found = false;
+    const db = readDB();
+    let found = false;
 
-      for (const subject of db) {
-        for (const form of subject.forms) {
-          const idx = form.exercises.findIndex(e => e.id === id);
-          if (idx !== -1) {
-            const ex = form.exercises[idx];
-            const merged = { ...ex, ...updated };
-
-            // preserve original created_at if present; if merged has no created_at, keep existing or set now
-            if (!merged.created_at) merged.created_at = ex.created_at || new Date().toISOString();
-
-            if (req.files?.length) {
-              merged.attached_files = (merged.attached_files || []).concat(
-                req.files.map(f => ({
-                  originalname: f.originalname,
-                  filename: path.basename(f.path)
-                }))
-              );
-            }
-
-            form.exercises[idx] = merged;
-            form.exercises.sort(
-              (a, b) => (diffOrder[a.difficulty] ?? 1) - (diffOrder[b.difficulty] ?? 1)
-            );
-
-            form.exercise_count = form.exercises.length;
-            subject.total_exercises = subject.forms.reduce(
-              (s, f) => s + (f.exercise_count || f.exercises.length || 0),
-              0
-            );
-
-            found = true;
-            break;
+    for (const subject of db) {
+      for (const form of subject.forms) {
+        const idx = form.exercises.findIndex(e => e.id === id);
+        if (idx !== -1) {
+          const ex = form.exercises[idx];
+          // permission: only owner may edit (if owner set)
+          if (ex.owner && req.user && ex.owner !== req.user.lecturer_id) {
+            return res.status(403).json({ error: 'Forbidden' });
           }
+          const merged = { ...ex, ...updated };
+
+          // preserve original created_at if present; if merged has no created_at, keep existing or set now
+          if (!merged.created_at) merged.created_at = ex.created_at || new Date().toISOString();
+
+          if (req.files?.length) {
+            merged.attached_files = (merged.attached_files || []).concat(
+              req.files.map(f => ({
+                originalname: f.originalname,
+                filename: path.basename(f.path)
+              }))
+            );
+          }
+
+          form.exercises[idx] = merged;
+          form.exercises.sort(
+            (a, b) => (diffOrder[a.difficulty] ?? 1) - (diffOrder[b.difficulty] ?? 1)
+          );
+
+          form.exercise_count = form.exercises.length;
+          subject.total_exercises = subject.forms.reduce(
+            (s, f) => s + (f.exercise_count || f.exercises.length || 0),
+            0
+          );
+
+          found = true;
+          break;
         }
-        if (found) break;
       }
-
-      if (!found) return res.status(404).json({ error: 'Exercise not found' });
-
-      writeDB(db);
-      res.json({ success: true });
+      if (found) break;
     }
+
+    if (!found) return res.status(404).json({ error: 'Exercise not found' });
+
+    writeDB(db);
+    res.json({ success: true });
 
   } catch (err) {
     console.error(err);
@@ -647,54 +459,46 @@ app.put('/api/exercise/:id', auth, upload.array('files'), checkSubjectPermission
 });
 
 // delete
-app.delete('/api/exercise/:id', auth, checkSubjectPermission, async (req, res) => {
+app.delete('/api/exercise/:id', auth, (req, res) => {
   const id = req.params.id;
-  const useExternal = (process.env.USE_EXTERNAL_DB || '').toLowerCase() === '1' || (process.env.USE_EXTERNAL_DB || '').toLowerCase() === 'true';
+  const db = readDB();
 
-  if (useExternal) {
-    // Delete from SQL
-    await deleteExerciseFromSQL(id);
-    res.json({ success: true });
-  } else {
-    // Delete from local db.json
-    const db = readDB();
-    let removed = false;
+  let removed = false;
 
-    for (const subject of db) {
-      for (const form of subject.forms) {
-        const idx = form.exercises.findIndex(e => e.id === id);
+  for (const subject of db) {
+    for (const form of subject.forms) {
+      const idx = form.exercises.findIndex(e => e.id === id);
 
-        if (idx !== -1) {
-          form.exercises.splice(idx, 1);
+      if (idx !== -1) {
+        // permission: only owner may delete (if owner set)
+        const ex = form.exercises[idx];
+        if (ex.owner && req.user && ex.owner !== req.user.lecturer_id) return res.status(403).json({ error: 'Forbidden' });
+        form.exercises.splice(idx, 1);
 
-          form.exercise_count = form.exercises.length;
-          subject.total_exercises = subject.forms.reduce(
-            (s, f) => s + (f.exercise_count || f.exercises.length || 0),
-            0
-          );
+        form.exercise_count = form.exercises.length;
+        subject.total_exercises = subject.forms.reduce(
+          (s, f) => s + (f.exercise_count || f.exercises.length || 0),
+          0
+        );
 
-          removed = true;
-          break;
-        }
+        removed = true;
+        break;
       }
-
-      if (removed) break;
     }
 
-    if (!removed) return res.status(404).json({ error: 'Not found' });
-
-    writeDB(db);
-    res.json({ success: true });
+    if (removed) break;
   }
-});
 
-// External data is read live from DB when USE_EXTERNAL_DB is set.
-// Subject consolidation uses MaMon or falls back to MaBaiTap prefix.
+  if (!removed) return res.status(404).json({ error: 'Not found' });
+
+  writeDB(db);
+  res.json({ success: true });
+});
 
 // ==================================================
 //  EXPORT EXCEL
 // ==================================================
-app.get('/api/export', auth, checkSubjectPermission, async (req, res) => {
+app.get('/api/export', auth, async (req, res) => {
   const subject_id = req.query.subject_id;
 
   // optional filters: since (ISO date) to export only exercises created after this time
@@ -830,7 +634,7 @@ app.post('/api/export-inline', auth, async (req, res) => {
 //  LECTURER ME
 // ==================================================
 app.get('/api/lecturer/me', auth, (req, res) => {
-  res.json({ lecturer_id: req.user.lecturer_id, name: req.user.name, is_admin: req.user.is_admin || false, allowed_subjects: req.user.allowed_subjects || [] });
+  res.json({ lecturer_id: req.user.lecturer_id, name: req.user.name });
 });
 
 // ==================================================
@@ -840,21 +644,15 @@ app.get('/lecturer', auth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'lecturer.html'));
 });
 
-console.log('[routes] All API routes registered');
-
 // serve login page (friendly URL)
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-console.log('[routes] Login route registered');
-
 // fallback for SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-console.log('[routes] Fallback SPA route registered');
 
 // export app for Vercel (optional)
 module.exports = app;
@@ -864,32 +662,5 @@ module.exports = app;
 // ==================================================
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
-  console.log(`[startup] Attempting to listen on port ${PORT}...`);
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[startup] Server LISTENING on port ${PORT}`);
-    console.log(`Environment: USE_EXTERNAL_DB=${process.env.USE_EXTERNAL_DB || 'not set'}`);
-  });
-  
-  server.on('listening', () => {
-    console.log('[startup] Server event: listening');
-  });
-  
-  server.on('connection', (conn) => {
-    console.log('[connection] New connection');
-  });
-  
-  // Handle errors
-  server.on('error', (err) => {
-    console.error('[error] Server error:', err);
-    process.exit(1);
-  });
-  
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('[error] Unhandled Rejection:', reason);
-  });
-  
-  process.on('uncaughtException', (err) => {
-    console.error('[error] Uncaught Exception:', err);
-    process.exit(1);
-  });
+  app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
 }

@@ -17,22 +17,37 @@ body{font-family:var(--font);margin:0;background:var(--bg);color:var(--text)}
 .main{margin-left:280px;padding:24px}
 #main-header{display:flex;align-items:center;justify-content:space-between}
 #forms-container{margin-top:16px}
-.form-card{background:var(--card);padding:12px;border-radius:8px;margin-bottom:12px;border:1px solid #e6e9ee}
-.form-card h3{margin:0 0 6px}
+.form-card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:18px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 6px 18px rgba(2,6,23,0.03)}
+.form-card h3{margin:0 0 8px;color:var(--primary);font-size:18px}
+
+/* subject summary bar shown above forms */
+.subject-summary{background:#fff;padding:10px 14px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);margin-bottom:14px;display:flex;gap:18px;align-items:center}
+.subject-summary .summary-item{font-size:14px;color:#333}
+.subject-summary .summary-item .key{font-weight:700;color:var(--primary);margin-right:6px}
 .exercise-item{padding:8px;border-radius:6px;margin:6px 0;display:flex;justify-content:space-between;align-items:center}
 .exercise-item .title{cursor:pointer}
-.exercise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:16px}
-.exercise-card{background:var(--card);padding:18px;border-radius:10px;border:1px solid #e6e9ee;cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:140px}
-.exercise-card:hover{box-shadow:0 10px 28px rgba(31,41,55,0.09);transform:translateY(-4px);transition:all .14s ease}
-.exercise-title{font-weight:700;font-size:16px}
-.exercise-desc{font-size:14px;color:#444}
-.exercise-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
+.exercise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin-top:16px}
+.exercise-card{background:var(--card);padding:18px;border-radius:12px;border:1px solid rgba(0,0,0,0.06);cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:150px;transition:transform .18s ease,box-shadow .18s ease}
+.exercise-card:hover{box-shadow:0 14px 40px rgba(2,6,23,0.08);transform:translateY(-6px)}
+.exercise-title{font-weight:700;font-size:18px;color:var(--primary)}
+.exercise-desc{font-size:14px;color:#4b5563}
+.exercise-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;gap:12px}
+.small{font-size:12px;color:#6b7280}
+.muted{color:#9aa0a6}
 .badge{background:#f3f3f3;padding:6px 10px;border-radius:12px;font-size:13px}
 
-/* difficulty colors - stronger/darker backgrounds for better contrast */
-.badge.easy, .badge-easy{background:#2e7d32;color:#fff;border:1px solid #25692b}
-.badge.medium, .badge-medium{background:#ff9800;color:#fff;border:1px solid #e07a00}
-.badge.hard, .badge-hard{background:#c62828;color:#fff;border:1px solid #a51f1f}
+/* difficulty tag styles */
+.difficulty-tag{display:inline-block;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;color:#0b6f3a;background:#e6f4ea;border:1px solid #cdeed0}
+.difficulty-tag.medium{color:#b45f00;background:#fff4e5;border:1px solid #ffe2b8}
+.difficulty-tag.hard{color:#a31f1f;background:#fdecea;border:1px solid #f6c8c8}
+
+/* grid spacing tweaks for modern card layout */
+.exercise-grid{margin-top:14px}
+
+/* difficulty colors */
+.badge.easy{background:#e6f4ea;color:#0b6f3a;border:1px solid #cdeed0}
+.badge.medium{background:#fff4e5;color:#b45f00;border:1px solid #ffe2b8}
+.badge.hard{background:#fdecea;color:#a31f1f;border:1px solid #f6c8c8}
 
 /* ensure primary and accent used for headings and buttons */
 .brand{color:var(--primary)}
@@ -44,17 +59,29 @@ h1, h2, h3 {font-family:var(--font);color:var(--primary)}
 #exercise-overlay.show{opacity:1;visibility:visible}
 
 /* right-side panel for exercise detail */
-#exercise-detail{position:fixed;right:0;top:0;height:100vh;width:480px;max-width:92vw;z-index:1100;transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow: -8px 0 24px rgba(2,6,23,0.12);overflow:auto;padding:20px;background:var(--card);border-left:1px solid rgba(0,0,0,0.06)}
+#exercise-detail{position:fixed;right:0;top:0;height:100vh;width:520px;max-width:96vw;z-index:1100;transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow: -8px 0 24px rgba(2,6,23,0.12);overflow:auto;padding:22px;background:var(--card);border-left:1px solid rgba(0,0,0,0.06)}
 #exercise-detail.open{transform:translateX(0)}
-#exercise-detail .close-ex{position:absolute;left:8px;top:8px;border:none;background:transparent;font-size:22px;cursor:pointer}
+#exercise-detail .close-ex{position:absolute;left:8px;top:8px;border:none;background:transparent;font-size:24px;cursor:pointer}
 
 /* content inside panel should scroll if long */
 #exercise-detail .content{padding-top:28px}
 
 
-/* exercise detail modal */
-#exercise-detail.open{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1200;background:var(--card);padding:20px;border-radius:10px;max-width:880px;max-height:86vh;overflow:auto;border:1px solid #e6e9ee;box-shadow:0 20px 50px rgba(31,41,55,0.2)}
-#exercise-detail.open .close-ex{position:absolute;right:16px;top:12px;border:none;background:transparent;font-size:22px;cursor:pointer}
+/* exercise detail modal (centered) */
+#exercise-detail.open{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1200;background:var(--card);padding:28px;border-radius:12px;max-width:960px;max-height:86vh;overflow:auto;border:1px solid #e6e9ee;box-shadow:0 30px 70px rgba(31,41,55,0.24)}
+#exercise-detail.open .close-ex{position:absolute;right:18px;top:14px;border:none;background:transparent;font-size:24px;cursor:pointer}
+
+/* modal typography improvements */
+#exercise-detail h2{font-size:22px;margin:0 0 8px}
+#exercise-detail .badge{font-size:13px;padding:6px 12px}
+#exercise-detail .section{margin-top:18px;border-top:1px solid #eef2f6;padding-top:14px}
+#exercise-detail .meta-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+#exercise-detail .meta-row .meta-item{min-width:150px}
+#exercise-detail .meta-item strong{display:inline-block;width:110px;color:#374151}
+#exercise-detail p, #exercise-detail li{font-size:15px;line-height:1.5;color:#374151}
+#exercise-detail .small.muted{font-size:13px;color:#6b7280}
+#exercise-detail ul{padding-left:20px;margin:8px 0}
+#exercise-detail li{margin-bottom:8px}
 
 /* header controls */
 #main-header{display:flex;align-items:center;justify-content:space-between}
@@ -63,43 +90,12 @@ h1, h2, h3 {font-family:var(--font);color:var(--primary)}
 #theme-toggle{background:transparent;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
 
 /* dark mode */
-/* dark mode */
-body.dark-mode{
-  --bg: #0f1724;
-  --card: #0b1220;
-  --text: #e6eef8;
-  --muted: #cbd5e1;
-  --border: #1f2937;
-  --primary: #8ab4ff;
-  --accent: #ffb366;
-  background:var(--bg);
-  color:var(--text);
-}
-body.dark-mode .sidebar{background:var(--card);color:var(--muted);border-right:1px solid #111827}
-body.dark-mode .form-card, body.dark-mode .exercise-card, body.dark-mode .card, body.dark-mode .modal-content{background:var(--card);color:var(--text);border:1px solid var(--border)}
-body.dark-mode .exercise-desc, body.dark-mode .small{color:var(--muted)}
-body.dark-mode .badge{background:#111827;color:var(--text)}
-body.dark-mode .accent{background:var(--accent);color:#061018}
-
-/* ensure specific elements use variable colors for high contrast */
-body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode .brand { color: var(--primary); }
-body.dark-mode .modal-close, body.dark-mode .modal-close-text { color: var(--muted); }
-body.dark-mode .sidebar li { color: var(--muted); }
-body.dark-mode .sidebar li.active { background: var(--primary); color: #001428; }
-
-/* Overrides for styles declared in lecturer.html and index.html */
-body.dark-mode .small-muted { color: var(--muted) !important; }
-body.dark-mode .subject-header { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03); }
-body.dark-mode .subject-header:hover { background: rgba(255,255,255,0.03); }
-body.dark-mode .subject-count { color: var(--muted) !important; }
-body.dark-mode .exercise-item { background: var(--card); border-color: var(--border); color: var(--text); }
-body.dark-mode .exercise-item:hover { background: rgba(255,255,255,0.02); box-shadow: none; }
-body.dark-mode .exercise-controls button { background: transparent; border-color: rgba(255,255,255,0.03); color: var(--muted); }
-body.dark-mode .exercise-controls .edit { color: #82cfff; }
-body.dark-mode .exercise-controls .delete { color: #ff8b8b; }
-body.dark-mode .modal-content { background: var(--card); color: var(--text); }
-body.dark-mode .subject-exercises .exercise-title, body.dark-mode .exercise-title { color: var(--text); }
-body.dark-mode .subject-title { color: var(--primary); }
+body.dark-mode{background:#0f1724;color:#e6eef8}
+body.dark-mode .sidebar{background:#0b1220;color:#cfe0ff;border-right:1px solid #111827}
+body.dark-mode .form-card, body.dark-mode .exercise-card, body.dark-mode .card, body.dark-mode .modal-content{background:#0b1220;color:#e6eef8;border:1px solid #1f2937}
+body.dark-mode .exercise-desc, body.dark-mode .small{color:#cbd5e1}
+body.dark-mode .badge{background:#111827;color:#e6eef8}
+body.dark-mode .accent{background:var(--accent);color:#fff}
 .card{background:var(--card);padding:16px;border-radius:8px;border:1px solid #e6e9ee}
 .hidden{display:none}
 .accent{background:var(--accent);color:#fff;padding:8px 12px;border:none;border-radius:6px;cursor:pointer}
@@ -120,6 +116,16 @@ form label{display:block;margin-top:8px;font-size:13px}
 form input, form textarea, form select{width:100%;padding:8px;margin-top:4px;border:1px solid #ddd;border-radius:6px}
 .panel-actions{display:flex;gap:8px;margin:8px 0}
 .lecturer-login{position:absolute;bottom:20px;left:20px}
+
+/* lecturer manage table */
+.manage-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:6px;overflow:hidden}
+.manage-table th, .manage-table td{padding:10px 12px;border-bottom:1px solid #f1f3f5;text-align:left;vertical-align:middle;font-size:14px}
+.manage-table tbody tr:hover{background:#fafbfd}
+.btn-edit{background:#28a745;color:#fff;border:none;padding:6px 10px;border-radius:4px}
+.btn-delete{background:#dc3545;color:#fff;border:none;padding:6px 10px;border-radius:4px}
+.btn-edit:hover{opacity:0.95}
+.btn-delete:hover{opacity:0.95}
+
 
 /* small screens */
 @media(max-width:800px){.sidebar{position:relative;width:100%;height:auto}.main{margin-left:0}}
