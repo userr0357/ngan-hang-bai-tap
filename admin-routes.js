@@ -915,6 +915,15 @@ module.exports = function(app, auth) {
       let updated = 0; let inserted = 0;
 
       for (const item of data) {
+        // Đảm bảo TieuChiChamDiem luôn là chuỗi JSON hợp lệ (ví dụ: "[]")
+        let safeCrit = '[]';
+        try {
+          if (item.TieuChiChamDiem && typeof item.TieuChiChamDiem === 'string' && item.TieuChiChamDiem.trim() !== '') {
+            JSON.parse(item.TieuChiChamDiem);
+            safeCrit = item.TieuChiChamDiem;
+          }
+        } catch (e) { safeCrit = '[]'; }
+
         if (item.action === 'UPDATE' && item.MaBaiTap) {
           await pool.request()
             .input('id', mssql.VarChar, item.MaBaiTap)
@@ -925,7 +934,7 @@ module.exports = function(app, auth) {
             .input('skill', mssql.Int, parseInt(item.SkillLevel) || null)
             .input('desc', mssql.NVarChar, item.MoTa)
             .input('req', mssql.NVarChar, item.YeuCau)
-            .input('crit', mssql.NVarChar, item.TieuChiChamDiem)
+            .input('crit', mssql.NVarChar, safeCrit)
             .input('files', mssql.NVarChar, item.FileDinhKem)
             .query(`UPDATE BAITAP SET 
               TenBaiTap=@title, MaMon=@mon, MaDangBai=@dang, MaDoKho=@kho, SkillLevel=@skill,
@@ -948,7 +957,7 @@ module.exports = function(app, auth) {
             .input('skill', mssql.Int, parseInt(item.SkillLevel) || null)
             .input('desc', mssql.NVarChar, item.MoTa)
             .input('req', mssql.NVarChar, item.YeuCau)
-            .input('crit', mssql.NVarChar, item.TieuChiChamDiem)
+            .input('crit', mssql.NVarChar, safeCrit)
             .input('files', mssql.NVarChar, item.FileDinhKem)
             .input('gv', mssql.VarChar, req.user.lecturer_id || 'ADMIN')
             .query(`INSERT INTO BAITAP (MaBaiTap, TenBaiTap, MaMon, MaDangBai, MaDoKho, SkillLevel, MoTa, YeuCau, TieuChiChamDiem, FileDinhKem, MaGiangVien, IsDeleted, UpdatedAt, CreatedAt)
