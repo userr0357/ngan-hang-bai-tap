@@ -746,7 +746,9 @@ function renderDetailExercisesTable(query = '') {
     const lvl = ex.SkillLevel || 1;
     const col = lvlColors[lvl] || '#94a3b8';
     const dc = diffColors[ex.TenDoKho] || ['#f1f5f9','#475569'];
-    const fmt = ex.UpdatedAt ? new Date(ex.UpdatedAt).toLocaleDateString('vi-VN') : '—';
+    // Fix timezone: backend sends Vietnam time as UTC. Strip 'Z' to treat as local.
+    const dateStr = ex.UpdatedAt ? ex.UpdatedAt.replace('Z', '') : null;
+    const fmt = dateStr ? new Date(dateStr).toLocaleDateString('vi-VN') : '—';
     row.innerHTML = `
       <td style="padding:12px 14px;font-family:monospace;font-size:15px;color:#6366f1;font-weight:600;">${ex.MaBaiTap}</td>
       <td style="padding:12px 14px;">
@@ -1326,7 +1328,8 @@ async function openProfileModal(magv) {
     document.getElementById('profile-exercises').innerHTML = recentExercises.length
       ? recentExercises.map(e => {
           const tenBai = e.TenBaiTap || e.TieuDe || '(Không có tên)';
-          const t = e.UpdatedAt ? new Date(e.UpdatedAt).toLocaleDateString('vi-VN') : '—';
+          const dStr = e.UpdatedAt ? e.UpdatedAt.replace('Z', '') : null;
+          const t = dStr ? new Date(dStr).toLocaleDateString('vi-VN') : '—';
           return `<div style="padding:8px 10px; background:var(--bg-color,#f8fafc); border-radius:7px; font-size:14px;">
             <div style="font-weight:600; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px;" title="${tenBai}">${tenBai}</div>
             <div style="color:var(--text-muted); margin-top:2px;">${e.MaMon || '—'} • ${t}</div>
@@ -1641,7 +1644,7 @@ function renderExercisesAdminTable(data, tbody) {
     4: { label: 'Rất khó',   bg: '#fef2f2', color: '#dc2626' },
     5: { label: 'Chuyên gia',bg: '#f5f3ff', color: '#7c3aed' },
   };
-  const fmt = dt => dt ? new Date(dt).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+  const fmt = dt => dt ? new Date(dt.replace('Z', '')).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
 
   tbody.innerHTML = data.map(r => {
     const lv    = levelCfg[r.MaDoKho] || { label: r.TenDoKho || '—', bg:'#f1f5f9', color:'#64748b' };
@@ -1865,7 +1868,7 @@ async function openAdminExModal(maBaiTap) {
       }
     } catch (_) {}
 
-    const fmt = dt => dt ? new Date(dt).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+    const fmt = dt => dt ? new Date(dt.replace('Z', '')).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
 
     const levelCfg = {
       1: { label: 'Dễ', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
