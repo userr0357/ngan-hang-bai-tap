@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <script>if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark-mode-preload")</script>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard - PTUD</title>
+  <link rel="stylesheet" href="/styles.css?v=11">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ── Base font size ── */
+    html, body { font-size:17px; }
+    .admin-section, .admin-table, .form-group, .form-input,
+    .btn, label, input, select, textarea { font-size:17px; }
+    .chart-box h3 { font-size:18px; margin-bottom: 8px; }
+
+    /* ── Global minimum font sizes ── */
+    .admin-table th { font-size:16px !important; padding: 14px 16px !important; }
+    .admin-table td { font-size:16px !important; padding: 14px 16px !important; }
+    .admin-table td span { font-size:15px !important; }
+    .admin-table td div { font-size:15px !important; }
+    .admin-table td .monospace-sub,
+    .admin-table td div[style*="monospace"] { font-size:14px !important; }
+    .section-title { font-size:21px !important; }
+
+    /* ── Filter bars ── */
+    .admin-section label { font-size:15px !important; }
+    .admin-section input[type="text"],
+    .admin-section input[type="date"],
+    .admin-section select { font-size:16px !important; padding: 9px 14px !important; }
+    .admin-section button { font-size:16px !important; }
+
+    /* ── Stat cards ── */
+    .admin-section [style*="font-size:25px"] { font-size:26px !important; }
+    .admin-section [style*="font-size:23px"] { font-size:25px !important; }
+    .admin-section [style*="font-size:21px"] { font-size:23px !important; }
+
+    /* ── Subtitle / description text ── */
+    .admin-section p[style*="color:var(--text-muted)"] { font-size:16px !important; }
+
+    /* ── Pagination ── */
+    #ex-pagination-info { font-size:16px !important; }
+    #ex-pagination-btns button { font-size:16px !important; }
+
+    /* ── Sidebar layout ── */
+    .sidebar-lecturer {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    .sidebar-lecturer nav { flex: 1; }
+
+    /* ── Menu items ── */
+    .menu-item {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px;
+      padding: 10px 12px !important;
+      border-radius: 8px !important;
+      cursor: pointer;
+      font-size:16px !important;
+      font-weight: 500 !important;
+      color:var(--text-main) !important;
+      margin-bottom: 2px;
+      transition: background 0.15s, color 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .menu-item:hover {
+      background: #eff6ff !important;
+      color: #2563eb !important;
+    }
+    .menu-item.active {
+      background: linear-gradient(90deg, #eff6ff, #e0e7ff) !important;
+      color: #2563eb !important;
+      font-weight: 700 !important;
+      border-left-color: #6366f1 !important;
+    }
+    .menu-item.active span:first-child {
+      filter: none;
+    }
+  </style>
+</head>
+<body>
+    <button class="theme-toggle-btn" style="position:fixed;top:16px;right:16px;z-index:9999;" data-theme-btn="" title="Chuyển sang tối" onclick="toggleDarkMode()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+  <div class="admin-wrapper">
+    <aside class="sidebar-lecturer admin-sidebar">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 4px">
+        <div class="brand-lecturer" style="display:flex; align-items:center; gap:10px; padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,0.08);">
+        <span style="font-size:25px;">🛡️</span>
+        <span style="font-size:18px; font-weight:700; color:var(--text-main);">Admin Panel</span>
+      </div>
+        <button id="sidebar-toggle" onclick="toggleSidebar()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border-color);background:var(--card-bg);color:var(--text-muted);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s" title="Thu gọn menu">◀</button>
+      </div>
+
+      <nav style="flex:1; overflow-y:auto; padding:12px 0;">
+        <div class="menu-group menu-label" style="padding:12px 16px 6px; font-size:12px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em;" >QUẢN LÝ</div>
+        <ul class="menu-lecturer" style="list-style:none; margin:0; padding:0 8px;">
+          <li class="menu-item active" data-section="dashboard" onclick="switchSection('dashboard')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">📊</span> Tổng quan
+          </li>
+          <li class="menu-item" data-section="exercises" onclick="switchSection('exercises')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">📋</span> Danh sách bài tập
+          </li>
+        </ul>
+
+        <div class="menu-group menu-label" style="padding:12px 16px 6px; font-size:12px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em;" >DANH MỤC</div>
+        <ul class="menu-lecturer" style="list-style:none; margin:0; padding:0 8px;">
+          <li class="menu-item" data-section="students" onclick="switchSection('students')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">🎓</span> Quản lý sinh viên
+          </li>
+        </ul>
+
+        <div class="menu-group menu-label" style="padding:12px 16px 6px; font-size:12px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em;" >NGƯỜI DÙNG</div>
+        <ul class="menu-lecturer" style="list-style:none; margin:0; padding:0 8px;">
+          <li class="menu-item" data-section="users" onclick="switchSection('users')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">👥</span> Quản lý giảng viên
+          </li>
+          <li class="menu-item" data-section="export" onclick="switchSection('export')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">📤</span> Xuất báo cáo
+          </li>
+        </ul>
+
+        <div class="menu-group menu-label" style="padding:12px 16px 6px; font-size:12px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em;" >BÁO CÁO</div>
+        <ul class="menu-lecturer" style="list-style:none; margin:0; padding:0 8px;">
+          <li class="menu-item" data-section="history" onclick="switchSection('history')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">🔑</span> Lịch sử đăng nhập
+          </li>
+          
+          <li class="menu-item" data-section="feedback-history" onclick="switchSection('feedback-history')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">💬</span> Lịch sử góp ý
+          </li>
+          <li class="menu-item" data-section="exercise-history" onclick="switchSection('exercise-history')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">📝</span> Lịch sử bài tập
+          </li>
+          <li class="menu-item" data-section="duplicates" onclick="switchSection('duplicates')"
+              style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:2px;">
+            <span style="font-size:18px; flex-shrink:0;">🔍</span> Kiểm tra trùng lặp
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Footer -->
+      <div style="border-top:1px solid var(--border-color); padding:14px 16px; background:var(--bg-color);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#818cf8); display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:700; color:white; flex-shrink:0;" class="admin-user-name-avatar">A</div>
+          <div style="min-width:0;">
+            <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Quản trị viên</div>
+            <div style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" class="admin-user-name">Admin</div>
+          </div>
+        </div>
+        <button onclick="logout()"
+          style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:9px 14px; background:var(--card-bg); border:1.5px solid #e2e8f0; border-radius:8px; font-size:15px; font-weight:600; color:var(--text-muted); cursor:pointer; transition:all 0.15s;"
+          onmouseover="this.style.background='#fef2f2'; this.style.color='#dc2626'; this.style.borderColor='#fecaca';"
+          onmouseout="this.style.background='white'; this.style.color='#64748b'; this.style.borderColor='#e2e8f0';">
+          <span style="font-size:17px;">🚪</span> Đăng Xuất
+        </button>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="admin-content">
+        <div id="dashboard" class="admin-section active">
+          <h2 class="section-title">📊 Tổng quan hệ thống</h2>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+            <div onclick="navigateTo('section-lecturers')" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(37,99,235,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(37,99,235,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(37,99,235,0.25)'" title="Xem danh sách giảng viên">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:28px;">👥</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Xem</span>
+              </div>
+              <div style="font-size:28px;font-weight:800;margin:6px 0 2px;" id="total-lecturers">0</div>
+              <div style="font-size:14px;opacity:0.85;">Tổng Giảng Viên</div>
+            </div>
+            <div onclick="navigateTo('section-exercises')" style="background:linear-gradient(135deg,#16a34a,#15803d);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(22,163,74,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(22,163,74,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(22,163,74,0.25)'" title="Xem danh sách bài tập">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:28px;">📝</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Xem</span>
+              </div>
+              <div style="font-size:28px;font-weight:800;margin:6px 0 2px;" id="total-exercises">0</div>
+              <div style="font-size:14px;opacity:0.85;">Tổng Bài Tập</div>
+            </div>
+            <div onclick="navigateTo('section-students'); setTimeout(()=>svCardClick('submitted'), 300)" style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(245,158,11,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(245,158,11,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(245,158,11,0.25)'" title="Xem sinh viên đã làm bài">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:28px;">🎯</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Xem</span>
+              </div>
+              <div style="font-size:28px;font-weight:800;margin:6px 0 2px;" id="today-logins">0</div>
+              <div style="font-size:14px;opacity:0.85;">Sinh viên làm bài tập</div>
+            </div>
+            <div onclick="navigateTo('section-exercises')" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(124,58,237,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(124,58,237,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(124,58,237,0.25)'" title="Xem danh sách môn học">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:28px;">📚</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Xem</span>
+              </div>
+              <div style="font-size:28px;font-weight:800;margin:6px 0 2px;" id="total-subjects">0</div>
+              <div style="font-size:14px;opacity:0.85;">Tổng Môn Học</div>
+            </div>
+          </div>
+          <div style="background:var(--card-bg); border-radius:12px; padding:20px; border:1px solid var(--border-color); margin-top:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+              <div>
+                <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">📈 Hoạt động theo ngày</h3>
+                <p style="margin:4px 0 0;font-size:15px;color:var(--text-muted);">Số lượt nộp bài & sinh viên làm bài</p>
+              </div>
+              <input type="month" id="activity-month-filter" onchange="loadDashboardStats()" style="padding:8px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-size:15px; background:var(--bg-color); color:var(--text-main); outline:none;">
+            </div>
+            <div style="position:relative; height:350px;"><canvas id="chart-login-activity"></canvas></div>
+          </div>
+
+          <!-- ─── Phân Loại Theo Môn Học ─── -->
+          <div style="background:var(--card-bg);border-radius:12px;padding:20px;border:1px solid var(--border-color);margin-top:20px;">
+            <div style="margin-bottom:14px;">
+              <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">📊 Phân loại theo môn học</h3>
+              <p style="margin:4px 0 0;font-size:15px;color:var(--text-muted);">Số bài tập phân bổ theo từng môn học</p>
+            </div>
+            <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start;">
+              <div style="position:relative;height:220px;"><canvas id="dash-pie-subject"></canvas></div>
+              <div>
+                <table style="width:100%;border-collapse:collapse;font-size:16px;">
+                  <thead>
+                    <tr style="border-bottom:2px solid var(--border-color);">
+                      <th style="padding:8px 10px;text-align:left;color:var(--text-muted);font-weight:600;font-size:15px;">Môn Học</th>
+                      <th style="padding:8px 10px;text-align:center;color:var(--text-muted);font-weight:600;font-size:15px;">Số Bài</th>
+                      <th style="padding:8px 6px;color:var(--text-muted);font-weight:600;font-size:15px;">Tỷ Lệ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-subject-legend-tbody">
+                    <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">Đang tải...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── Phân Loại Theo Cấp Độ Khó ─── -->
+          <div style="background:var(--card-bg);border-radius:12px;padding:20px;border:1px solid var(--border-color);margin-top:16px;">
+            <div style="margin-bottom:14px;">
+              <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">🎯 Phân loại theo cấp độ khó</h3>
+              <p style="margin:4px 0 0;font-size:15px;color:var(--text-muted);">Phân bổ bài tập theo 5 cấp độ kỹ năng</p>
+            </div>
+            <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start;">
+              <div style="position:relative;height:220px;"><canvas id="dash-pie-level"></canvas></div>
+              <div>
+                <table style="width:100%;border-collapse:collapse;font-size:16px;">
+                  <thead>
+                    <tr style="border-bottom:2px solid var(--border-color);">
+                      <th style="padding:8px 10px;text-align:left;color:var(--text-muted);font-weight:600;font-size:15px;">Cấp Độ</th>
+                      <th style="padding:8px 10px;text-align:center;color:var(--text-muted);font-weight:600;font-size:15px;">Số Bài</th>
+                      <th style="padding:8px 6px;color:var(--text-muted);font-weight:600;font-size:15px;">Tỷ Lệ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-level-legend-tbody">
+                    <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">Đang tải...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── Phân Loại Theo Mức Kỹ Năng (full row) ─── -->
+          <div style="background:var(--card-bg);border-radius:12px;border:1px solid var(--border-color);overflow:hidden;margin-top:16px;">
+            <div style="background:linear-gradient(135deg,#6366f1,#818cf8);padding:16px 20px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <h3 style="margin:0;font-size:17px;font-weight:700;color:white;">🧠 Phân loại theo mức kỹ năng</h3>
+                  <p style="margin:4px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Phân bổ bài tập theo 5 cấp độ kỹ năng lập trình</p>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:25px;font-weight:800;color:white;" id="skill-total-count">—</div>
+                  <div style="font-size:12px;color:rgba(255,255,255,0.75);">Tổng bài có level</div>
+                </div>
+              </div>
+            </div>
+            <div id="skill-level-cards" style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;">
+              <div style="text-align:center;padding:30px;color:var(--text-muted);">⏳ Đang tải...</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- MODAL: Chi tiết bài tập theo Level -->
+        <div id="skill-detail-modal" style="display:none; position:fixed; inset:0; z-index:2100; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); overflow-y:auto;">
+          <div style="max-width:800px; margin:40px auto; background:var(--card-bg); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.25); overflow:hidden;">
+            <div id="skill-modal-header" style="background:linear-gradient(135deg,#6366f1,#818cf8); padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h2 id="skill-modal-title" style="margin:0; font-size:18px; font-weight:700; color:white;">Chi tiết Level</h2>
+                <div id="skill-modal-subtitle" style="font-size:15px; color:rgba(255,255,255,0.8); margin-top:4px;"></div>
+              </div>
+              <button onclick="closeSkillModal()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:36px; height:36px; border-radius:8px; font-size:21px; cursor:pointer;">&times;</button>
+            </div>
+            <div style="padding:20px; max-height:65vh; overflow-y:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:16px;">
+                <thead>
+                  <tr style="border-bottom:2px solid #f1f5f9;">
+                    <th style="padding:10px 12px; text-align:left; color:var(--text-muted); font-weight:600; font-size:15px; width:100px;">Mã bài</th>
+                    <th style="padding:10px 12px; text-align:left; color:var(--text-muted); font-weight:600; font-size:15px;">Tên bài tập</th>
+                    <th style="padding:10px 12px; text-align:left; color:var(--text-muted); font-weight:600; font-size:15px; width:140px;">Môn học</th>
+                    <th style="padding:10px 12px; text-align:left; color:var(--text-muted); font-weight:600; font-size:15px; width:150px;">Giảng viên</th>
+                    <th style="padding:10px 12px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; width:80px;">Cấp độ</th>
+                    <th style="padding:10px 12px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; width:90px;">Chi tiết</th>
+                  </tr>
+                </thead>
+                <tbody id="skill-modal-tbody">
+                  <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">Đang tải...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="padding:14px 24px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; background:#fafafa;">
+              <button onclick="closeSkillModal()" style="padding:9px 20px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;">Đóng</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════ -->
+        <!-- SECTION: DANH SÁCH BÀI TẬP (ADMIN) -->
+        <!-- ═══════════════════════════════════ -->
+        <div id="exercises" class="admin-section">
+          <!-- Header -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <h2 class="section-title" style="margin:0;">📋 Danh sách bài tập</h2>
+              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Giám sát toàn bộ ngân hàng bài tập của hệ thống</p>
+            </div>
+          </div>
+
+          <!-- Stats cards -->
+          <div id="ex-stats-bar" style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;">
+            <!-- Card 1: Tất cả -->
+            <div onclick="statCardFilter('all')" style="background:linear-gradient(135deg,#6366f1,#818cf8); border-radius:12px; padding:16px; color:white; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(99,102,241,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+              <span style="font-size:28px;">📝</span>
+              <div><div style="font-size:25px; font-weight:800;" id="ex-stat-total">—</div><div style="font-size:14px; opacity:0.85;">Tổng Bài Tập</div>
+              <div style="font-size:11px; opacity:0.7; margin-top:2px;">↗ Xem tất cả</div></div>
+            </div>
+            <!-- Card 2: 7 ngày qua -->
+            <div onclick="statCardFilter('new7')" style="background:linear-gradient(135deg,#10b981,#059669); border-radius:12px; padding:16px; color:white; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(16,185,129,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+              <span style="font-size:28px;">🆕</span>
+              <div><div style="font-size:25px; font-weight:800;" id="ex-stat-new">—</div><div style="font-size:14px; opacity:0.85;">Thêm 7 Ngày Qua</div>
+              <div style="font-size:11px; opacity:0.7; margin-top:2px;">↗ Lọc bài mới</div></div>
+            </div>
+            <!-- Card 3: Môn học -->
+            <div onclick="statCardFilter('subjects')" style="background:linear-gradient(135deg,#f59e0b,#d97706); border-radius:12px; padding:16px; color:white; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(245,158,11,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+              <span style="font-size:28px;">📚</span>
+              <div><div style="font-size:25px; font-weight:800;" id="ex-stat-subjects">—</div><div style="font-size:14px; opacity:0.85;">Số Môn Được Phủ</div>
+              <div style="font-size:11px; opacity:0.7; margin-top:2px;">↗ Chọn môn học</div></div>
+            </div>
+            <!-- Card 4: GV -->
+            <div onclick="statCardFilter('gv')" style="background:linear-gradient(135deg,#06b6d4,#0891b2); border-radius:12px; padding:16px; color:white; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(6,182,212,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+              <span style="font-size:28px;">👨‍🏫</span>
+              <div><div style="font-size:25px; font-weight:800;" id="ex-stat-gv">—</div><div style="font-size:14px; opacity:0.85;">GV Đang Đóng Góp</div>
+              <div style="font-size:11px; opacity:0.7; margin-top:2px;">↗ Lọc theo GV</div></div>
+            </div>
+          </div>
+
+          <!-- Filter bar -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); padding:16px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+            <div style="flex:1; min-width:180px;">
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">🔍 Tìm tên bài tập</label>
+              <input type="text" id="ex-filter-search" placeholder="Nhập từ khóa..." oninput="filterExercisesAdmin()"
+                style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Môn học</label>
+              <select id="ex-filter-mon" onchange="filterExercisesAdmin()"
+                style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; min-width:160px;">
+                <option value="">-- Tất cả --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Giảng viên</label>
+              <select id="ex-filter-gv" onchange="filterExercisesAdmin()"
+                style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; min-width:170px;">
+                <option value="">-- Tất cả GV --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Cấp độ</label>
+              <select id="ex-filter-level" onchange="filterExercisesAdmin()"
+                style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px;">
+                <option value="">Tất cả</option>
+                <option value="1">1 – Dễ</option>
+                <option value="2">2 – Trung bình</option>
+                <option value="3">3 – Khó</option>
+                <option value="4">4 – Rất khó</option>
+                <option value="5">5 – Chuyên gia</option>
+              </select>
+            </div>
+            <button onclick="resetExercisesAdminFilter()"
+              style="padding:9px 16px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:8px; font-size:15px; cursor:pointer; font-weight:600;">↺ Reset</button>
+          </div>
+
+          <!-- Table -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); overflow:hidden;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="min-width:250px;">Tên Bài Tập</th>
+                  <th>Môn Học</th>
+                  <th>Giảng Viên</th>
+                  <th style="text-align:center;">Cấp Độ</th>
+                  <th>Dạng Bài</th>
+                  <th style="text-align:center;">Cập Nhật</th>
+                  <th style="text-align:center; width:100px;">Hành Động</th>
+                </tr>
+              </thead>
+              <tbody id="exercises-admin-tbody">
+                <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">
+                  <div class="spinner"></div> Đang tải...
+                </td></tr>
+              </tbody>
+            </table>
+            <!-- Pagination -->
+            <div style="padding:12px 16px; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);">
+              <span id="ex-pagination-info" style="font-size:15px; color:var(--text-muted);"></span>
+              <div id="ex-pagination-btns" style="display:flex; gap:4px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="users" class="admin-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 class="section-title" style="margin:0;">👥 Quản lý giảng viên</h2>
+            <div style="display:flex; gap:10px;">
+              <input type="text" id="gv-search-input" placeholder="Tìm tên hoặc mã GV..." style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; width:200px;" oninput="filterLecturers()" />
+              <button class="btn btn-primary" onclick="openAddLecturerModal()">+ Thêm Mới</button>
+            </div>
+          </div>
+          <!-- ── Stats Cards - Professional redesign ── -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+            <div onclick="document.getElementById('lecturers-stats-tbody').scrollIntoView({behavior:'smooth', block:'center'})" style="background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:14px;padding:20px;color:white;box-shadow:0 4px 14px rgba(99,102,241,0.25);position:relative;overflow:hidden;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(99,102,241,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(99,102,241,0.25)'" title="Xem danh sách giảng viên">
+              <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;background:rgba(255,255,255,0.12);border-radius:50%;"></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div style="font-size:28px;">👨‍🏫</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Lọc</span>
+              </div>
+              <div id="stat-total-gv" style="font-size:32px;font-weight:800;line-height:1;">0</div>
+              <div style="font-size:15px;font-weight:600;opacity:0.85;margin-top:4px;">Giảng viên</div>
+            </div>
+            <div onclick="document.getElementById('pie-subject-distribution').scrollIntoView({behavior:'smooth', block:'center'})" style="background:linear-gradient(135deg,#10b981,#34d399);border-radius:14px;padding:20px;color:white;box-shadow:0 4px 14px rgba(16,185,129,0.25);position:relative;overflow:hidden;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(16,185,129,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(16,185,129,0.25)'" title="Xem phân bố môn học">
+              <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;background:rgba(255,255,255,0.12);border-radius:50%;"></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div style="font-size:28px;">📘</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Xem</span>
+              </div>
+              <div id="stat-total-mh" style="font-size:32px;font-weight:800;line-height:1;">0</div>
+              <div style="font-size:15px;font-weight:600;opacity:0.85;margin-top:4px;">Môn học</div>
+            </div>
+            <div onclick="switchSection('exercises')" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:14px;padding:20px;color:white;box-shadow:0 4px 14px rgba(245,158,11,0.25);position:relative;overflow:hidden;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(245,158,11,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(245,158,11,0.25)'" title="Đi tới danh sách bài tập">
+              <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;background:rgba(255,255,255,0.12);border-radius:50%;"></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div style="font-size:28px;">📝</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Chuyển</span>
+              </div>
+              <div id="stat-total-bt" style="font-size:32px;font-weight:800;line-height:1;">0</div>
+              <div style="font-size:15px;font-weight:600;opacity:0.85;margin-top:4px;">Bài tập</div>
+            </div>
+            <div onclick="document.getElementById('lecturers-stats-tbody').scrollIntoView({behavior:'smooth', block:'center'})" style="background:linear-gradient(135deg,#0891b2,#22d3ee);border-radius:14px;padding:20px;color:white;box-shadow:0 4px 14px rgba(8,145,178,0.25);position:relative;overflow:hidden;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(8,145,178,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(8,145,178,0.25)'" title="Giảng viên đang hoạt động">
+              <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;background:rgba(255,255,255,0.12);border-radius:50%;"></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div style="font-size:28px;">✅</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Lọc</span>
+              </div>
+              <div id="stat-active-gv" style="font-size:32px;font-weight:800;line-height:1;">0</div>
+              <div style="font-size:15px;font-weight:600;opacity:0.85;margin-top:4px;">Đang hoạt động</div>
+            </div>
+          </div>
+
+          <!-- ── Lecturer Table (moved UP) ── -->
+          <div style="background:var(--card-bg);border-radius:12px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:24px;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width:52px;"></th>
+                  <th>Giảng Viên</th>
+                  <th>Email &amp; Username</th>
+                  <th>Môn Phụ Trách</th>
+                  <th style="text-align:center;">Số Bài</th>
+                  <th style="text-align:center;">Đăng Nhập Cuối</th>
+                  <th style="text-align:center;">Quyền / Trạng Thái</th>
+                  <th style="text-align:center;min-width:200px;">Hành Động</th>
+                </tr>
+              </thead>
+              <tbody id="lecturers-stats-tbody"></tbody>
+            </table>
+            <div id="gv-pagination" style="padding:12px 16px;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;background:var(--bg-color);">
+              <span id="gv-pagination-info" style="font-size:15px;color:var(--text-muted);"></span>
+              <div id="gv-pagination-btns" style="display:flex;gap:4px;"></div>
+            </div>
+          </div>
+
+          <!-- ── Analytics Charts (moved DOWN) ── -->
+          <div id="lecturer-analytics-dashboard" style="margin-bottom:24px;">
+            <!-- Theo Môn Học - full width row -->
+            <div style="background:var(--card-bg);border-radius:12px;border:1px solid var(--border-color);padding:20px;margin-bottom:16px;">
+              <div style="margin-bottom:16px;">
+                <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">📊 Theo Môn Học</h3>
+                <p style="margin:4px 0 0;font-size:15px;color:var(--text-muted);">Phân bổ số lượng bài tập theo từng môn học</p>
+              </div>
+              <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
+                <div style="height:280px;position:relative;">
+                  <canvas id="pie-subject-distribution"></canvas>
+                </div>
+                <div>
+                  <table style="width:100%;border-collapse:collapse;font-size:16px;">
+                    <thead>
+                      <tr style="border-bottom:2px solid var(--border-color);">
+                        <th style="padding:8px 10px;text-align:left;color:var(--text-muted);font-weight:600;font-size:15px;">Môn học</th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--text-muted);font-weight:600;font-size:15px;">Số bài</th>
+                        <th style="padding:8px 6px;color:var(--text-muted);font-weight:600;font-size:15px;">Tỷ lệ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="subject-chart-legend-tbody">
+                      <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">Đang tải...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <!-- Theo Cấp Độ - full width row -->
+            <div style="background:var(--card-bg);border-radius:12px;border:1px solid var(--border-color);padding:20px;margin-bottom:16px;">
+              <div style="margin-bottom:16px;">
+                <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">🎯 Theo Cấp Độ</h3>
+                <p style="margin:4px 0 0;font-size:15px;color:var(--text-muted);">Phân bổ bài tập theo 5 cấp độ kỹ năng lập trình</p>
+              </div>
+              <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
+                <div style="height:280px;position:relative;">
+                  <canvas id="pie-level-distribution"></canvas>
+                </div>
+                <div>
+                  <table style="width:100%;border-collapse:collapse;font-size:16px;">
+                    <thead>
+                      <tr style="border-bottom:2px solid var(--border-color);">
+                        <th style="padding:8px 10px;text-align:left;color:var(--text-muted);font-weight:600;font-size:15px;">Cấp độ</th>
+                        <th style="padding:8px 10px;text-align:center;color:var(--text-muted);font-weight:600;font-size:15px;">Số bài</th>
+                        <th style="padding:8px 6px;color:var(--text-muted);font-weight:600;font-size:15px;">Tỷ lệ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="level-chart-legend-tbody">
+                      <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">Đang tải...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Biểu đồ Theo Dạng Bài -->
+          <div style="background:var(--card-bg);border-radius:12px;border:1px solid var(--border-color);padding:20px;margin-bottom:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <div>
+                <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">📋 Phân bổ theo dạng bài</h3>
+                <p style="margin:4px 0 0;font-size:15px;color:var(--text-muted);">Chọn môn học để lọc dữ liệu theo dạng bài tương ứng</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <label style="font-size:16px;color:var(--text-muted);font-weight:600;">Lọc theo Môn:</label>
+                <select id="type-chart-subject-filter" onchange="reloadTypeChart()" style="padding:8px 14px;border:1px solid var(--border-color);border-radius:8px;font-size:16px;color:var(--text-main);background:var(--card-bg);cursor:pointer;">
+                  <option value="">-- Tất cả Môn --</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
+              <div style="height:280px;position:relative;">
+                <canvas id="pie-type-distribution"></canvas>
+              </div>
+              <div>
+                <table style="width:100%;border-collapse:collapse;font-size:16px;">
+                  <thead>
+                    <tr style="border-bottom:2px solid var(--border-color);">
+                      <th style="padding:8px 10px;text-align:left;color:var(--text-muted);font-weight:600;font-size:15px;">Dạng Bài</th>
+                      <th style="padding:8px 10px;text-align:center;color:var(--text-muted);font-weight:600;font-size:15px;">Số bài</th>
+                      <th style="padding:8px 6px;color:var(--text-muted);font-weight:600;font-size:15px;">Tỷ lệ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="type-chart-legend-tbody">
+                    <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">Đang tải...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION: QUẢN LÍ SINH VIÊN                  -->
+        <!-- ═══════════════════════════════════════════ -->
+
+        <div id="students" class="admin-section">
+          <!-- Header -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <h2 class="section-title" style="margin:0;">🎓 Quản lý sinh viên</h2>
+              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Danh sách sinh viên và lịch sử nộp bài trong hệ thống</p>
+            </div>
+          </div>
+
+          <!-- Stats cards -->
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;">
+            <div onclick="svCardClick('all')" style="background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(99,102,241,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(99,102,241,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(99,102,241,0.25)'" title="Hiển thị tất cả sinh viên">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:25px;">🎓</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Lọc</span>
+              </div>
+              <div style="font-size:26px;font-weight:800;margin:6px 0 2px;" id="sv-stat-total">—</div>
+              <div style="font-size:14px;opacity:0.85;">Tổng Sinh Viên</div>
+            </div>
+            <div onclick="svCardClick('classes')" style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(16,185,129,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(16,185,129,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(16,185,129,0.25)'" title="Xem danh sách lớp">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:25px;">🏫</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Lọc</span>
+              </div>
+              <div style="font-size:26px;font-weight:800;margin:6px 0 2px;" id="sv-stat-classes">—</div>
+              <div style="font-size:14px;opacity:0.85;">Số Lớp</div>
+            </div>
+            <div onclick="svCardClick('faculty')" style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(245,158,11,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(245,158,11,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(245,158,11,0.25)'" title="Lọc theo khoa">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:25px;">📝</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Lọc</span>
+              </div>
+              <div style="font-size:26px;font-weight:800;margin:6px 0 2px;" id="sv-stat-faculties">—</div>
+              <div style="font-size:14px;opacity:0.85;">Số Khoa</div>
+            </div>
+            <div onclick="svCardClick('submitted')" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(139,92,246,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(139,92,246,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(139,92,246,0.25)'" title="Lọc SV đã nộp bài">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:25px;">✅</div>
+                <span style="font-size:12px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;">→ Lọc</span>
+              </div>
+              <div style="font-size:26px;font-weight:800;margin:6px 0 2px;" id="sv-stat-submitted">—</div>
+              <div style="font-size:14px;opacity:0.85;">Đã Nộp Bài</div>
+            </div>
+          </div>
+
+          <!-- Search & Filter -->
+          <div style="background:var(--card-bg); border-radius:12px; padding:16px; border:1px solid #e5e7eb; margin-bottom:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <input id="sv-search" type="text" placeholder="🔍 Tìm MSSV hoặc tên sinh viên..." oninput="svSearchDebounce()"
+              style="flex:1; min-width:200px; padding:9px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:16px; outline:none;">
+            <select id="sv-filter-class" onchange="loadStudents(1)"
+              style="padding:9px 14px; border:1px solid var(--border-color); border-radius:8px; font-size:16px; color:var(--text-main); background:var(--card-bg); min-width:120px;">
+              <option value="">— Tất cả lớp —</option>
+            </select>
+            <button onclick="loadStudents(1)" style="padding:9px 18px; background:#6366f1; color:white; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;">Tìm kiếm</button>
+          </div>
+
+          <!-- Table -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; font-size:16px;">
+              <thead style="background:var(--bg-color);">
+                <tr>
+                  <th style="padding:12px 16px; text-align:left; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">MSSV</th>
+                  <th style="padding:12px 16px; text-align:left; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">Họ và Tên</th>
+                  <th style="padding:12px 16px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">Lớp</th>
+                  <th style="padding:12px 16px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">Khoa</th>
+                  <th style="padding:12px 16px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">Lần Nộp</th>
+                  <th style="padding:12px 16px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">ĐTB</th>
+                  <th style="padding:12px 16px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">Hoàn Thành</th>
+                  <th style="padding:12px 16px; text-align:center; color:var(--text-muted); font-weight:600; font-size:15px; border-bottom:1px solid #f1f5f9;">Chi Tiết</th>
+                </tr>
+              </thead>
+              <tbody id="sv-tbody">
+                <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-muted);">⏳ Đang tải...</td></tr>
+              </tbody>
+            </table>
+            <div style="padding:12px 16px; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:#fafafa;">
+              <span id="sv-pagination-info" style="font-size:15px; color:var(--text-muted);"></span>
+              <div id="sv-pagination-btns" style="display:flex; gap:4px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL: Chi tiết sinh viên -->
+        <div id="sv-detail-modal" style="display:none; position:fixed; inset:0; z-index:2100; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); overflow-y:auto;">
+          <div style="max-width:850px; margin:30px auto; background:var(--card-bg); border-radius:16px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <!-- Header -->
+            <div id="sv-modal-header" style="background:linear-gradient(135deg,#6366f1,#818cf8); padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h2 id="sv-modal-name" style="margin:0; font-size:19px; font-weight:700; color:white;">Sinh viên</h2>
+                <div id="sv-modal-info" style="font-size:15px; color:rgba(255,255,255,0.8); margin-top:4px;"></div>
+              </div>
+              <button onclick="closeSvModal()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:36px; height:36px; border-radius:8px; font-size:21px; cursor:pointer;">&times;</button>
+            </div>
+            <!-- Score summary -->
+            <div id="sv-modal-scores" style="display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-bottom:1px solid #f1f5f9;"></div>
+            <!-- History table -->
+            <div style="padding:20px; max-height:55vh; overflow-y:auto;">
+              <h3 style="margin:0 0 12px; font-size:17px; font-weight:700; color:var(--text-main);">📋 Lịch sử nộp bài</h3>
+              <table style="width:100%; border-collapse:collapse; font-size:15px;">
+                <thead>
+                  <tr style="border-bottom:2px solid #f1f5f9; background:var(--bg-color);">
+                    <th style="padding:10px; text-align:left; color:var(--text-muted); font-weight:600;">Mã Bài</th>
+                    <th style="padding:10px; text-align:left; color:var(--text-muted); font-weight:600;">Tên Bài Tập</th>
+                    <th style="padding:10px; text-align:left; color:var(--text-muted); font-weight:600;">Môn Học</th>
+                    <th style="padding:10px; text-align:center; color:var(--text-muted); font-weight:600;">Điểm</th>
+                    <th style="padding:10px; text-align:center; color:var(--text-muted); font-weight:600;">Đạo văn</th>
+                    <th style="padding:10px; text-align:left; color:var(--text-muted); font-weight:600;">Thời gian nộp</th>
+                  </tr>
+                </thead>
+                <tbody id="sv-history-tbody">
+                  <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">Đang tải...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="padding:14px 24px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; background:#fafafa;">
+              <button onclick="closeSvModal()" style="padding:9px 20px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:8px; font-weight:600; cursor:pointer;">Đóng</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION: XUẤT BÁO CÁO                      -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div id="export" class="admin-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <h2 class="section-title" style="margin:0;">📤 Xuất báo cáo</h2>
+              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Xuất dữ liệu hệ thống ra file Excel / CSV chuẩn đại học</p>
+            </div>
+          </div>
+
+          <!-- 3 Export Cards -->
+          <div style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:24px;">
+
+            <!-- Card 1: Bài tập (Full picker) -->
+            <div style="background:var(--card-bg); border-radius:14px; border:1px solid var(--border-color); overflow:hidden; grid-column:1/-1;">
+              <div style="background:linear-gradient(135deg,#6366f1,#818cf8); padding:18px 24px; display:flex; align-items:center; gap:14px;">
+                <div style="font-size:32px;">📋</div>
+                <div>
+                  <h3 style="margin:0; color:white; font-size:18px; font-weight:800;">Xuất danh sách bài tập</h3>
+                  <p style="margin:3px 0 0; font-size:14px; color:rgba(255,255,255,0.85);">Chọn môn → lọc theo dạng bài / độ khó / level → tích chọn bài tập cần xuất</p>
+                </div>
+              </div>
+              <!-- Filter row -->
+              <div style="padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                <div style="flex:1; min-width:160px;">
+                  <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">📚 Môn học</label>
+                  <select id="exp-ex-mamon" onchange="loadAdminExportList()" style="width:100%; padding:9px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-size:15px; background:var(--bg-color); color:var(--text-main);">
+                    <option value="">— Chọn môn —</option>
+                  </select>
+                </div>
+                <div style="min-width:140px;">
+                  <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">🎯 Dạng bài</label>
+                  <select id="exp-ex-form" onchange="applyAdminExportFilters()" style="width:100%; padding:9px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-size:15px; background:var(--bg-color); color:var(--text-main);">
+                    <option value="">Tất cả dạng</option>
+                  </select>
+                </div>
+                <div style="min-width:130px;">
+                  <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">⚖️ Độ khó</label>
+                  <select id="exp-ex-diff" onchange="applyAdminExportFilters()" style="width:100%; padding:9px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-size:15px; background:var(--bg-color); color:var(--text-main);">
+                    <option value="">Tất cả</option>
+                    <option value="Dễ">🟢 Dễ</option>
+                    <option value="Trung bình">🟡 Trung bình</option>
+                    <option value="Khó">🔴 Khó</option>
+                  </select>
+                </div>
+                <div style="min-width:120px;">
+                  <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">📊 Level</label>
+                  <select id="exp-ex-level" onchange="applyAdminExportFilters()" style="width:100%; padding:9px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-size:15px; background:var(--bg-color); color:var(--text-main);">
+                    <option value="">Tất cả</option>
+                    <option value="1">L1 – Lắp ghép</option>
+                    <option value="2">L2 – Rẽ nhánh</option>
+                    <option value="3">L3 – Vòng lặp</option>
+                    <option value="4">L4 – Hàm</option>
+                    <option value="5">L5 – Giải thuật</option>
+                  </select>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; padding-top:18px;">
+                  <label style="display:flex; align-items:center; gap:5px; font-size:15px; cursor:pointer; white-space:nowrap;"><input type="radio" name="exp-ex-fmt" value="xlsx" checked> Excel</label>
+                  <label style="display:flex; align-items:center; gap:5px; font-size:15px; cursor:pointer; white-space:nowrap;"><input type="radio" name="exp-ex-fmt" value="csv"> CSV</label>
+                </div>
+              </div>
+              <!-- Exercise list -->
+              <div id="exp-ex-list-container" style="padding:16px 20px; min-height:120px; max-height:420px; overflow-y:auto;">
+                <div style="text-align:center; padding:40px; color:var(--text-muted); font-size:16px;">
+                  ← Chọn môn học để xem danh sách bài tập
+                </div>
+              </div>
+              <!-- Action bar -->
+              <div style="padding:12px 20px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);">
+                <div style="font-size:15px; color:var(--text-muted);">
+                  Đã chọn: <strong id="exp-ex-selected-count" style="color:var(--primary);">0</strong> bài tập
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <button onclick="selectAllAdminExport(true)" style="padding:7px 16px; border:1.5px solid var(--border-color); background:var(--bg-color); color:var(--text-muted); border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">☑ Chọn tất cả</button>
+                  <button onclick="selectAllAdminExport(false)" style="padding:7px 16px; border:1.5px solid var(--border-color); background:var(--bg-color); color:var(--text-muted); border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">☐ Bỏ chọn</button>
+                  <button onclick="doExportSelected()" style="padding:7px 20px; background:#6366f1; color:white; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s;">⬇ Xuất bài đã chọn</button>
+                  <button onclick="doExport('exercises')" style="padding:7px 20px; background:#0f172a; color:white; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;">⬇ Xuất tất cả</button>
+                  
+                  <div style="width:1px; background:var(--border-color); margin:0 5px;"></div>
+                  
+                  <input type="file" id="admin-import-file" style="display:none;" accept=".xlsx" onchange="handleAdminImport(event)">
+                  <button id="admin-import-btn" onclick="document.getElementById('admin-import-file').click()" style="padding:7px 20px; background:#10b981; color:white; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:5px;">
+                    ⬆ Nhập từ Excel
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Sinh viên -->
+            <div style="background:var(--card-bg); border-radius:14px; border:1px solid #e5e7eb; overflow:hidden; display:flex; flex-direction:column;">
+              <div style="background:linear-gradient(135deg,#10b981,#059669); padding:18px 20px;">
+                <div style="font-size:28px; margin-bottom:8px;">🎓</div>
+                <h3 style="margin:0; color:white; font-size:18px; font-weight:700;">Danh sách sinh viên</h3>
+                <p style="margin:4px 0 0; font-size:14px; color:rgba(255,255,255,0.8);">Thông tin sinh viên, điểm số, tỷ lệ hoàn thành bài tập</p>
+              </div>
+              <div style="padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                <div style="flex:1; min-width:160px;">
+                  <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">🏫 Lớp</label>
+                  <select id="exp-sv-lop" onchange="applyAdminExportStudentFilters()" style="width:100%; padding:9px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-size:15px; background:var(--bg-color); color:var(--text-main);">
+                    <option value="">— Tất cả lớp —</option>
+                  </select>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; padding-top:18px;">
+                  <label style="display:flex; align-items:center; gap:5px; font-size:15px; cursor:pointer; white-space:nowrap;"><input type="radio" name="exp-sv-fmt" value="xlsx" checked> Excel</label>
+                  <label style="display:flex; align-items:center; gap:5px; font-size:15px; cursor:pointer; white-space:nowrap;"><input type="radio" name="exp-sv-fmt" value="csv"> CSV</label>
+                </div>
+              </div>
+              <div id="exp-sv-list-container" style="padding:16px 20px; min-height:120px; max-height:420px; overflow-y:auto; flex:1;">
+                <div style="text-align:center; padding:40px; color:var(--text-muted); font-size:16px;">
+                  ⏳ Đang tải danh sách sinh viên...
+                </div>
+              </div>
+              <div style="padding:12px 20px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);">
+                <div style="font-size:15px; color:var(--text-muted);">
+                  Đã chọn: <strong id="exp-sv-selected-count" style="color:var(--primary);">0</strong> SV
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <button onclick="selectAllAdminExportSV(true)" style="padding:7px 16px; border:1.5px solid var(--border-color); background:var(--bg-color); color:var(--text-muted); border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">☑ Chọn tất cả</button>
+                  <button onclick="selectAllAdminExportSV(false)" style="padding:7px 16px; border:1.5px solid var(--border-color); background:var(--bg-color); color:var(--text-muted); border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">☐ Bỏ chọn</button>
+                  <button onclick="doExportSelected('students')" style="padding:7px 20px; background:#10b981; color:white; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;">⬇ Xuất SV đã chọn</button>
+                  <button onclick="doExport('students')" style="padding:7px 20px; background:#0f172a; color:white; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;">⬇ Xuất tất cả</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Điểm nộp bài -->
+            <div style="background:var(--card-bg); border-radius:14px; border:1px solid #e5e7eb; overflow:hidden; display:flex; flex-direction:column;">
+              <div style="background:linear-gradient(135deg,#f59e0b,#d97706); padding:18px 20px;">
+                <div style="font-size:28px; margin-bottom:8px;">📊</div>
+                <h3 style="margin:0; color:white; font-size:18px; font-weight:700;">Điểm Nộp Bài</h3>
+                <p style="margin:4px 0 0; font-size:14px; color:rgba(255,255,255,0.8);">Lịch sử nộp bài, điểm số, phát hiện đạo văn theo môn/bài</p>
+              </div>
+              <div style="padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                <div style="flex:1; min-width:160px;">
+                  <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">📚 Môn học</label>
+                  <select id="exp-gr-mamon" onchange="applyAdminExportGradeFilters()" style="width:100%; padding:9px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-size:15px; background:var(--bg-color); color:var(--text-main);">
+                    <option value="">— Tất cả môn —</option>
+                  </select>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; padding-top:18px;">
+                  <label style="display:flex; align-items:center; gap:5px; font-size:15px; cursor:pointer; white-space:nowrap;"><input type="radio" name="exp-gr-fmt" value="xlsx" checked> Excel</label>
+                  <label style="display:flex; align-items:center; gap:5px; font-size:15px; cursor:pointer; white-space:nowrap;"><input type="radio" name="exp-gr-fmt" value="csv"> CSV</label>
+                </div>
+              </div>
+              <div id="exp-gr-list-container" style="padding:16px 20px; min-height:120px; max-height:420px; overflow-y:auto; flex:1;">
+                <div style="text-align:center; padding:40px; color:var(--text-muted); font-size:16px;">
+                  ⏳ Đang tải lịch sử nộp bài...
+                </div>
+              </div>
+              <div style="padding:12px 20px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);">
+                <div style="font-size:15px; color:var(--text-muted);">
+                  Đã chọn: <strong id="exp-gr-selected-count" style="color:var(--primary);">0</strong> bài nộp
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <button onclick="selectAllAdminExportGr(true)" style="padding:7px 16px; border:1.5px solid var(--border-color); background:var(--bg-color); color:var(--text-muted); border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">☑ Chọn tất cả</button>
+                  <button onclick="selectAllAdminExportGr(false)" style="padding:7px 16px; border:1.5px solid var(--border-color); background:var(--bg-color); color:var(--text-muted); border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">☐ Bỏ chọn</button>
+                  <button onclick="doExportSelected('grades')" style="padding:7px 20px; background:#f59e0b; color:white; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;">⬇ Xuất điểm đã chọn</button>
+                  <button onclick="doExport('grades')" style="padding:7px 20px; background:#0f172a; color:white; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;">⬇ Xuất tất cả</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Export History Log -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
+            <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0; font-size:17px; font-weight:700; color:var(--text-main);">📜 Lịch sử xuất báo cáo</h3>
+              <button onclick="loadExportLog()" style="padding:6px 14px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:6px; font-size:15px; cursor:pointer;">🔄 Làm mới</button>
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:15px;">
+              <thead style="background:var(--bg-color);">
+                <tr>
+                  <th style="padding:10px 16px; text-align:left; color:var(--text-muted); font-weight:600;">Người xuất</th>
+                  <th style="padding:10px 16px; text-align:center; color:var(--text-muted); font-weight:600;">Loại báo cáo</th>
+                  <th style="padding:10px 16px; text-align:center; color:var(--text-muted); font-weight:600;">Định dạng</th>
+                  <th style="padding:10px 16px; text-align:center; color:var(--text-muted); font-weight:600;">Số dòng</th>
+                  <th style="padding:10px 16px; text-align:left; color:var(--text-muted); font-weight:600;">Thời gian</th>
+                </tr>
+              </thead>
+              <tbody id="export-log-tbody">
+                <tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">Chưa có lịch sử xuất</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECTION: Lịch Sử Đăng Nhập -->
+        <div id="history" class="admin-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <h2 class="section-title" style="margin:0;">🔑 Lịch sử đăng nhập</h2>
+              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Giám sát toàn bộ lịch sử đăng nhập của các giảng viên trong hệ thống</p>
+            </div>
+          </div>
+          <!-- Filter bar -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); padding:16px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Ngày</label>
+              <input type="date" id="lh-filter-date" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px;">
+            </div>
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Giảng viên</label>
+              <select id="lh-filter-gv" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; min-width:180px;">
+                <option value="">-- Tất cả GV --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Trạng thái</label>
+              <select id="lh-filter-status" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px;">
+                <option value="">Tất cả</option>
+                <option value="online">Đang online</option>
+                <option value="offline">Đã offline</option>
+              </select>
+            </div>
+            <button onclick="loadLoginHistory()" style="padding:9px 20px; background:#6366f1; color:white; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">🔍 Lọc</button>
+            <button onclick="resetLoginHistoryFilter()" style="padding:9px 16px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:8px; font-size:15px; cursor:pointer;">↺ Reset</button>
+          </div>
+          <!-- Stats summary -->
+          <div id="lh-stats-bar" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;"></div>
+          <!-- Table -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); overflow:hidden;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Giảng Viên</th>
+                  <th>Mã GV</th>
+                  <th style="text-align:center;">Thời Gian Đăng Nhập</th>
+                  <th style="text-align:center;">Thời Gian Đăng Xuất</th>
+                  <th style="text-align:center;">Thời Lượng</th>
+                  <th style="text-align:center;">Trạng Thái</th>
+                </tr>
+              </thead>
+              <tbody id="login-history-tbody">
+                <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">Nhấn "Lọc" để tải dữ liệu</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECTION: Lịch Sử Bài Tập -->
+        <div id="exercise-history" class="admin-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <h2 class="section-title" style="margin:0;">📝 Lịch sử hoạt động bài tập</h2>
+              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Theo dõi toàn bộ hoạt động tạo và chỉnh sửa bài tập của các giảng viên</p>
+            </div>
+          </div>
+          <!-- Filter bar -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); padding:16px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Giảng viên</label>
+              <select id="ea-filter-gv" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; min-width:180px;">
+                <option value="">-- Tất cả GV --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Môn học</label>
+              <select id="ea-filter-mon" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; min-width:160px;">
+                <option value="">-- Tất cả Môn --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:14px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Khoảng thời gian</label>
+              <select id="ea-filter-days" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px;">
+                <option value="7">7 ngày gần đây</option>
+                <option value="30" selected>30 ngày gần đây</option>
+                <option value="90">3 tháng gần đây</option>
+                <option value="365">1 năm gần đây</option>
+              </select>
+            </div>
+            <button onclick="loadExerciseActivity()" style="padding:9px 20px; background:#6366f1; color:white; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">🔍 Lọc</button>
+            <button onclick="resetExerciseActivityFilter()" style="padding:9px 16px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:8px; font-size:15px; cursor:pointer;">↺ Reset</button>
+          </div>
+          <!-- Table -->
+          <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); overflow:hidden;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="text-align:center; width:80px;">Hành Động</th>
+                  <th>Tên Bài Tập</th>
+                  <th>Giảng Viên</th>
+                  <th>Môn Học</th>
+                  <th style="text-align:center;">Level</th>
+                  <th style="text-align:center;">Ngày Tạo</th>
+                  <th style="text-align:center;">Cập Nhật Cuối</th>
+                </tr>
+              </thead>
+              <tbody id="exercise-activity-tbody">
+                <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">Nhấn "Lọc" để tải dữ liệu</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    
+    <!-- Feedback History Section -->
+    <div id="feedback-history" class="admin-section" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:48px;height:48px;background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:25px;box-shadow:0 4px 12px rgba(245,158,11,.25)">💬</div>
+          <div>
+            <h2 style="margin:0;font-size:23px;font-weight:800;color:var(--text-main)">Lịch sử góp ý</h2>
+            <p style="margin:2px 0 0;font-size:15px;color:var(--text-muted)">Tất cả góp ý giữa các giảng viên trong hệ thống</p>
+          </div>
+        </div>
+        <button onclick="loadAllFeedbacks()" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,.25)">🔄 Tải lại</button>
+      </div>
+      <div id="fb-admin-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+      <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="fb-admin-search" placeholder="🔍 Tìm kiếm theo tên bài tập, giảng viên..." oninput="filterAdminFeedbacks()" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-family:inherit;background:var(--bg-color);color:var(--text-main);outline:none">
+        <select id="fb-admin-status" onchange="filterAdminFeedbacks()" style="padding:8px 12px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-family:inherit;background:var(--card-bg);color:var(--text-main);cursor:pointer;outline:none">
+          <option value="">Tất cả trạng thái</option>
+          <option value="0">⏳ Chờ xử lý</option>
+          <option value="1">✅ Đã xử lý</option>
+          <option value="2">❌ Từ chối</option>
+        </select>
+      </div>
+      <div id="fb-admin-list" style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:40px;text-align:center;color:var(--text-muted)"><div style="font-size:40px;margin-bottom:12px">📭</div><div style="font-size:17px;font-weight:600">Chưa có góp ý nào</div><div style="font-size:15px;margin-top:4px">Giảng viên chưa gửi góp ý nào trong hệ thống</div></div>
+      </div>
+    </div>
+  
+<!-- SECTION: KIỂM TRA TRÙNG LẶP -->
+  <div id="duplicates" class="admin-section" style="display:none;">
+    <div style="background:linear-gradient(135deg,var(--bg-color),var(--card-bg));border-radius:14px;padding:22px 28px;box-shadow:0 6px 20px rgba(0,0,0,0.06);border:1px solid var(--border-color);margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:var(--text-main);letter-spacing:-0.02em;">
+          <span style="font-size:26px;margin-right:8px;vertical-align:middle;">🔍</span>Kiểm Tra Trùng Lặp
+        </h2>
+        <p style="margin:0;font-size:15px;color:var(--text-muted);">Phát hiện các bài tập sao chép nội dung bằng Thuật toán & AI.</p>
+      </div>
+      <div id="scan-button-container">
+        <!-- Nút này chỉ hiện cho Admin -->
+        <button id="btn-start-scan" onclick="startDuplicateScan()" style="display:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.3);transition:transform 0.15s;display:flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Quét Toàn Hệ Thống
+        </button>
+      </div>
+    </div>
+
+    <!-- Danh sách báo cáo -->
+    <div style="background:var(--card-bg);border-radius:14px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.04);border:1px solid var(--border-color);margin-bottom:24px;">
+      <h3 style="margin:0 0 16px;font-size:17px;font-weight:700;color:var(--text-main);">Danh sách nghi ngờ (Cần xử lý)</h3>
+      <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:10px;">
+        <table style="width:100%;border-collapse:collapse;font-size:15px;text-align:left;">
+          <thead>
+            <tr style="background:var(--bg-color);border-bottom:2px solid var(--border-color);">
+              <th style="padding:14px;color:var(--text-muted);">Mức độ</th>
+              <th style="padding:14px;color:var(--text-muted);">Bài A</th>
+              <th style="padding:14px;color:var(--text-muted);">Bài B</th>
+              <th style="padding:14px;color:var(--text-muted);">Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="duplicates-tbody">
+            <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">Đang tải dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lịch sử đã xử lý -->
+    <div style="background:var(--card-bg);border-radius:14px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.04);border:1px solid var(--border-color);">
+      <h3 style="margin:0 0 16px;font-size:17px;font-weight:700;color:var(--text-main);">Lịch sử đối soát</h3>
+      <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:10px;">
+        <table style="width:100%;border-collapse:collapse;font-size:15px;text-align:left;">
+          <thead>
+            <tr style="background:var(--bg-color);border-bottom:2px solid var(--border-color);">
+              <th style="padding:14px;color:var(--text-muted);">Kết quả</th>
+              <th style="padding:14px;color:var(--text-muted);">Mức độ</th>
+              <th style="padding:14px;color:var(--text-muted);">Bài Gốc (A)</th>
+              <th style="padding:14px;color:var(--text-muted);">Bài Bị Xử Lý (B)</th>
+              <th style="padding:14px;color:var(--text-muted);">Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="duplicate-history-tbody">
+            <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">Đang tải lịch sử...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SIDE-BY-SIDE -->
+  <div id="duplicate-modal" style="display:none;position:fixed;inset:0;z-index:3500;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);align-items:center;justify-content:center;">
+    <div style="width:95%;max-width:1100px;height:85vh;background:var(--card-bg);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);display:flex;flex-direction:column;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#3b82f6,#2563eb);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:18px;font-weight:700;color:white;display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">⚖️</span> Đối soát nội dung</h2>
+        <button onclick="closeDuplicateModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:8px;font-size:19px;cursor:pointer;">&times;</button>
+      </div>
+      
+      <div style="flex:1;display:flex;padding:20px;gap:20px;overflow:hidden;">
+        <!-- Bài A -->
+        <div style="flex:1;border:1px solid var(--border-color);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-color);">
+          <div style="background:#e0e7ff;padding:12px;border-bottom:1px solid #c7d2fe;">
+            <div id="dup-a-badge" style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;margin-bottom:4px;">Bài A</div>
+            <div id="dup-a-title" style="font-size:16px;font-weight:700;color:#1e3a8a;">[Tên bài]</div>
+            <div id="dup-a-gv" style="font-size:13px;color:#3730a3;margin-top:2px;">GV: ?</div>
+            <div id="dup-a-context" style="font-size:12px;color:#6366f1;margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+          </div>
+          <div style="padding:15px;overflow-y:auto;flex:1;">
+            <div style="background:#fef3c7;border:1px solid #fde68a;padding:12px;border-radius:8px;margin-bottom:15px;">
+              <div style="font-size:12px;font-weight:700;color:#d97706;margin-bottom:4px;">✨ Tóm tắt AI Groq:</div>
+              <div id="dup-a-summary" style="font-size:14px;color:#92400e;line-height:1.5;"></div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Từ khóa phân tích:</div>
+            <div id="dup-a-kw" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px;"></div>
+            <hr style="border:0;border-top:1px dashed var(--border-color);margin:15px 0;">
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Đề bài & Yêu cầu:</div>
+            <div id="dup-a-raw" style="font-size:13px;color:var(--text-main);white-space:pre-wrap;background:var(--input-bg);padding:10px;border-radius:6px;max-height:200px;overflow-y:auto;border:1px solid var(--border-color);line-height:1.5;"></div>
+          </div>
+        </div>
+        
+        <!-- VS Icon -->
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;color:#ef4444;width:80px;text-align:center;">
+          <div id="dup-method" style="font-size:11px;color:#8b5cf6;margin-bottom:8px;text-transform:uppercase;font-weight:700;line-height:1.3;"></div>
+          <div style="font-size:24px;background:#fee2e2;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fca5a5;margin:0 auto;">VS</div>
+          <div id="dup-score" style="margin-top:10px;font-size:18px;background:#fef2f2;padding:4px 10px;border-radius:20px;border:1px solid #fca5a5;">100%</div>
+        </div>
+
+        <!-- Bài B -->
+        <div style="flex:1;border:1px solid var(--border-color);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-color);">
+          <div style="background:#fee2e2;padding:12px;border-bottom:1px solid #fecaca;">
+            <div id="dup-b-badge" style="font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;margin-bottom:4px;">Bài B</div>
+            <div id="dup-b-title" style="font-size:16px;font-weight:700;color:#7f1d1d;">[Tên bài]</div>
+            <div id="dup-b-gv" style="font-size:13px;color:#991b1b;margin-top:2px;">GV: ?</div>
+            <div id="dup-b-context" style="font-size:12px;color:#dc2626;margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+          </div>
+          <div style="padding:15px;overflow-y:auto;flex:1;">
+            <div style="background:#fef3c7;border:1px solid #fde68a;padding:12px;border-radius:8px;margin-bottom:15px;">
+              <div style="font-size:12px;font-weight:700;color:#d97706;margin-bottom:4px;">✨ Tóm tắt AI Groq:</div>
+              <div id="dup-b-summary" style="font-size:14px;color:#92400e;line-height:1.5;"></div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Từ khóa phân tích:</div>
+            <div id="dup-b-kw" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px;"></div>
+            <hr style="border:0;border-top:1px dashed var(--border-color);margin:15px 0;">
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Đề bài & Yêu cầu:</div>
+            <div id="dup-b-raw" style="font-size:13px;color:var(--text-main);white-space:pre-wrap;background:var(--input-bg);padding:10px;border-radius:6px;max-height:200px;overflow-y:auto;border:1px solid var(--border-color);line-height:1.5;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer Action -->
+      <div style="padding:16px 20px;background:var(--bg-color);border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:12px;">
+        <input type="hidden" id="current-dup-report-id">
+        <button onclick="handleDuplicateAction('IGNORE')" style="padding:10px 20px;border:1.5px solid var(--border-color);border-radius:8px;background:var(--card-bg);color:var(--text-main);font-weight:600;cursor:pointer;">✅ Hợp lệ (Bỏ qua)</button>
+        <button onclick="handleDuplicateAction('MERGE')" style="padding:10px 20px;border:none;border-radius:8px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(239,68,68,0.3);">🗑 Gộp bài (Xóa Bài B)</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+  </div>
+  <!-- MODAL: Sửa Thông Tin GV (Quick Edit) -->
+  <div class="admin-modal" id="edit-lecturer-info-modal">
+    <div class="admin-modal-content" style="background:var(--card-bg, #fff);max-width:400px;padding:0;overflow:hidden;border-radius:16px;">
+      <div style="background:linear-gradient(135deg,#6366f1,#4f46e5);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;">✏️</div>
+          <div>
+            <h2 style="margin:0;font-size:18px;font-weight:700;color:white;">Sửa Thông Tin GV</h2>
+            <p style="margin:2px 0 0;font-size:14px;color:rgba(255,255,255,0.7);">Cập nhật họ tên và email</p>
+          </div>
+        </div>
+        <button onclick="closeEditLecturerInfoModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:34px;height:34px;border-radius:8px;font-size:19px;cursor:pointer;">&times;</button>
+      </div>
+      <form onsubmit="updateLecturerInfo(event)" style="padding:24px;">
+        <input type="hidden" id="edit-gv-id">
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Họ &amp; Tên</label>
+          <input type="text" id="legacy-edit-gv-name" placeholder="Nguyễn Văn A" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:10px;font-size:16px;color:var(--text-main);background:var(--card-bg);box-sizing:border-box;transition:border 0.2s;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='var(--border-color)'">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Email</label>
+          <input type="email" id="legacy-edit-gv-email" placeholder="gv@school.edu.vn" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:10px;font-size:16px;color:var(--text-main);background:var(--card-bg);box-sizing:border-box;transition:border 0.2s;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='var(--border-color)'">
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button type="button" onclick="closeEditLecturerInfoModal()" style="flex:1;padding:10px;border:1.5px solid var(--border-color);border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;background:var(--bg-color);color:var(--text-muted);">Hủy</button>
+          <button type="submit" style="flex:2;padding:10px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;box-shadow:0 4px 12px rgba(99,102,241,0.35);">💾 Cập Nhật</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Danh Sách Bài Tập Của GV -->
+  <div class="admin-modal" id="lecturer-exercises-detail-modal">
+    <div class="admin-modal-content" style="background:var(--card-bg, #fff);max-width:900px;width:95%;padding:0;overflow:hidden;border-radius:16px;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);padding:20px 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:44px;height:44px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:23px;">📊</div>
+            <div>
+              <h2 id="gv-detail-title" style="margin:0;font-size:18px;font-weight:700;color:white;">Chi Tiết Phân Loại</h2>
+              <p id="gv-detail-subtitle" style="margin:3px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Bấm vào biểu đồ để xem chi tiết</p>
+            </div>
+          </div>
+          <button onclick="closeLecturerExercisesModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:34px;height:34px;border-radius:8px;font-size:19px;cursor:pointer;flex-shrink:0;">&times;</button>
+        </div>
+        <!-- Search inside header -->
+        <div style="margin-top:14px;position:relative;">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text-muted);">🔍</span>
+          <input type="text" id="gv-detail-search" placeholder="Tìm kiếm bài tập theo tên, mã, môn học..." oninput="filterLecturerExercises()" style="width:100%;padding:9px 14px 9px 36px;border:1px solid rgba(255,255,255,0.3);border-radius:9px;font-size:15px;background:var(--card-bg,#fff)fff;color:var(--text-main);box-sizing:border-box;outline:none;box-shadow:0 2px 4px rgba(0,0,0,0.1);" onfocus="this.style.boxShadow='0 0 0 3px rgba(255,255,255,0.4)'" onblur="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+        </div>
+      </div>
+      <!-- Stats cards -->
+      <div id="gv-detail-stats" style="padding:16px 20px 0;"></div>
+      <!-- Table -->
+      <div style="max-height:380px;overflow-y:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:16px;">
+          <thead style="position:sticky;top:0;background:var(--card-bg);z-index:1;">
+            <tr style="border-bottom:2px solid var(--border-color);">
+              <th style="padding:11px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:120px;">Mã Bài</th>
+              <th style="padding:11px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Bài Tập / Môn</th>
+              <th style="padding:11px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:100px;">Độ Khó</th>
+              <th style="padding:11px 14px;text-align:center;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:80px;">Level</th>
+              <th style="padding:11px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:140px;">Giảng Viên</th>
+              <th style="padding:11px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:100px;">Cập Nhật</th>
+            </tr>
+          </thead>
+          <tbody id="gv-detail-exercises-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">Bấm vào biểu đồ để xem chi tiết</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Footer -->
+      <div style="padding:12px 20px;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+        <span id="gv-detail-count" style="font-size:15px;color:var(--text-muted);"></span>
+        <button onclick="closeLecturerExercisesModal()" style="padding:8px 20px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">Đóng</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-modal" id="lecturer-modal">
+    <div class="admin-modal-content" style="background:var(--card-bg, #fff);max-width:620px; width:95%; padding:0; overflow:hidden; border-radius:16px;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#6366f1,#4f46e5); padding:24px 28px; color:white; position:relative;">
+        <button class="admin-modal-close" onclick="closeLecturerModal()" style="position:absolute; top:16px; right:20px; color:white; background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:30px; height:30px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;">×</button>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:44px; height:44px; background:rgba(255,255,255,0.2); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:23px;">👨‍🏫</div>
+          <div>
+            <h2 id="lecturer-modal-title" style="margin:0; font-size:19px; font-weight:700;">Thêm Giảng Viên Mới</h2>
+            <p style="margin:2px 0 0; font-size:14px; opacity:0.8;">Tài khoản sẽ được kích hoạt ngay sau khi lưu</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div style="padding:24px 28px; background:var(--card-bg);">
+        <form onsubmit="saveLecturer(event)">
+          <!-- Row 1: Mã GV + Họ Tên -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">
+                Mã Giảng Viên <span style="color:#ef4444;">*</span>
+              </label>
+              <input type="text" id="lecturer-id" placeholder="VD: GV10" required
+                style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box; transition:border-color 0.2s;"
+                oninput="previewLoginInfo()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+              <div id="gv-id-hint" style="font-size:14px; color:var(--text-muted); margin-top:4px;">Mã dùng để đăng nhập vào hệ thống</div>
+            </div>
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">
+                Họ và Tên <span style="color:#ef4444;">*</span>
+              </label>
+              <input type="text" id="lecturer-name" placeholder="VD: Nguyễn Văn A" required
+                style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box;"
+                onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+          </div>
+
+          <!-- Row 2: Email + Mật khẩu -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">Email</label>
+              <input type="email" id="lecturer-email" placeholder="gv10@school.edu.vn"
+                style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box;"
+                onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">
+                Mật Khẩu <span style="color:#ef4444;">*</span>
+              </label>
+              <div style="position:relative;">
+                <input type="password" id="lecturer-password" placeholder="Tối thiểu 6 ký tự" required
+                  style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box; padding-right:40px;"
+                  oninput="checkPasswordStrength(this.value)"
+                  onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+                <span onclick="togglePwdVisibàility('lecturer-password',this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:17px; color:var(--text-muted);">👁</span>
+              </div>
+              <div id="pw-strength-bar" style="margin-top:5px; height:4px; border-radius:2px; background:#e2e8f0; overflow:hidden;">
+                <div id="pw-strength-fill" style="height:100%; width:0%; border-radius:2px; transition:all 0.3s;"></div>
+              </div>
+              <div id="pw-strength-text" style="font-size:14px; color:var(--text-muted); margin-top:2px;"></div>
+            </div>
+          </div>
+
+          <!-- Môn học phụ trách - 2 tabs -->
+          <div style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label style="font-size:15px; font-weight:600; color:var(--text-main);">📚 Môn Học Phụ Trách</label>
+              <!-- Tab switcher -->
+              <div style="display:flex; background:var(--bg-color); border-radius:8px; padding:3px; gap:2px;">
+                <button type="button" id="tab-pick-btn"
+                  onclick="switchSubjectTab('pick')"
+                  style="padding:5px 14px; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; background:#6366f1; color:white; transition:all 0.15s;">
+                  ✔ Chọn có sẵn
+                </button>
+                <button type="button" id="tab-add-btn"
+                  onclick="switchSubjectTab('add')"
+                  style="padding:5px 14px; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; background:transparent; color:var(--text-muted); transition:all 0.15s;">
+                  + Thêm môn mới
+                </button>
+              </div>
+            </div>
+
+            <!-- Tab 1: Chọn môn có sẵn -->
+            <div id="tab-content-pick">
+              <div id="subject-tags-picker"
+                style="display:flex; flex-wrap:wrap; gap:6px; min-height:48px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; background:var(--bg-color); max-height:130px; overflow-y:auto;">
+                <span style="color:var(--text-muted); font-size:15px; align-self:center;">Đang tải danh sách môn học...</span>
+              </div>
+              <div style="font-size:15px; color:var(--text-muted); margin-top:5px;" id="selected-subjects-count">Chưa chọn môn nào</div>
+            </div>
+
+            <!-- Tab 2: Tạo môn học mới -->
+            <div id="tab-content-add" style="display:none;">
+              <div style="border:1.5px solid #e2e8f0; border-radius:8px; padding:14px; background:#fafafa;">
+                <div style="font-size:15px; color:var(--text-muted); margin-bottom:10px;">
+                  Tạo môn học mới và tự động gán cho giảng viên này
+                </div>
+                <div style="display:grid; grid-template-columns:130px 1fr; gap:10px; margin-bottom:10px;">
+                  <div>
+                    <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:4px;">
+                      Mã Môn <span style="color:#ef4444;">*</span>
+                    </label>
+                    <input type="text" id="new-subject-mamon" placeholder="VD: KTLT"
+                      maxlength="10"
+                      style="width:100%; padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:15px; font-family:monospace; text-transform:uppercase; box-sizing:border-box;"
+                      oninput="this.value=this.value.toUpperCase()"
+                      onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+                    <div style="font-size:14px; color:var(--text-muted); margin-top:2px;">Tối đa 10 ký tự</div>
+                  </div>
+                  <div>
+                    <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:4px;">
+                      Tên Môn Học <span style="color:#ef4444;">*</span>
+                    </label>
+                    <input type="text" id="new-subject-tenmon" placeholder="VD: Kỹ thuật lập trình"
+                      maxlength="100"
+                      style="width:100%; padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:15px; box-sizing:border-box;"
+                      onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <button type="button" id="btn-create-subject" onclick="createAndSelectSubject()"
+                    style="padding:9px 18px; background:#6366f1; color:white; border:none; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer;">
+                    ✅ Tạo & Gán Môn
+                  </button>
+                  <span id="new-subject-status" style="font-size:14px;"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quyền mặc định -->
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; margin-bottom:20px;">
+            <div style="font-size:15px; font-weight:600; color:#15803d; margin-bottom:10px;">🔐 Quyền truy cập mặc định</div>
+            <div style="display:flex; gap:24px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:15px; color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="perm-xem" checked style="accent-color:#6366f1;"> Xem bài tập
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:15px; color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="perm-sua" checked style="accent-color:#6366f1;"> Tạo/Sửa bài tập
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:15px; color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="perm-xoa" style="accent-color:#6366f1;"> Xóa bài tập
+              </label>
+            </div>
+          </div>
+
+          <!-- Preview thông tin đăng nhập -->
+          <div id="login-info-preview" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:20px; display:none;">
+            <div style="font-size:15px; color:#1d4ed8; font-weight:600; margin-bottom:6px;">🔑 Thông tin đăng nhập sẽ được tạo</div>
+            <div style="display:flex; gap:20px;">
+              <div style="font-size:15px;">Tên đăng nhập: <strong id="preview-username" style="font-family:monospace; color:#1e40af;"></strong></div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" onclick="closeLecturerModal()"
+              style="padding:10px 20px; border:1.5px solid #e2e8f0; border-radius:8px; background:var(--card-bg); color:var(--text-muted); font-size:15px; font-weight:600; cursor:pointer;">
+              Hủy
+            </button>
+            <button type="submit" id="save-lecturer-btn"
+              style="padding:10px 24px; border:none; border-radius:8px; background:linear-gradient(135deg,#6366f1,#4f46e5); color:white; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+              <span>✅</span> Tạo Tài Khoản
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- MODAL: Chi Tiết Hoạt Động Ngày -->
+  <div class="admin-modal" id="activity-detail-modal">
+    <div class="admin-modal-content" style="background:var(--card-bg, #fff);max-width:860px;width:95%;padding:0;overflow:hidden;border-radius:16px;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0891b2,#0e7490);padding:20px 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:44px;height:44px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:23px;">📊</div>
+            <div>
+              <h2 id="activity-modal-title" style="margin:0;font-size:18px;font-weight:700;color:white;">Chi Tiết Hoạt Động</h2>
+              <p id="activity-modal-subtitle" style="margin:3px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Danh sách nộp bài trong ngày</p>
+            </div>
+          </div>
+          <button onclick="closeActivityModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:34px;height:34px;border-radius:8px;font-size:19px;cursor:pointer;">&times;</button>
+        </div>
+      </div>
+      <!-- Stats bar -->
+      <div id="activity-modal-stats" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border-color);"></div>
+      <!-- Table -->
+      <div style="max-height:420px;overflow-y:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:16px;">
+          <thead style="position:sticky;top:0;background:var(--card-bg);z-index:1;">
+            <tr style="border-bottom:2px solid var(--border-color);">
+              <th style="padding:11px 14px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Thời Gian</th>
+              <th style="padding:11px 14px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Sinh Viên</th>
+              <th style="padding:11px 14px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Bài Tập</th>
+              <th style="padding:11px 14px;text-align:center;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Điểm</th>
+            </tr>
+          </thead>
+          <tbody id="activity-modal-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Footer -->
+      <div style="padding:12px 20px;border-top:1px solid var(--border-color);background:var(--bg-color);display:flex;justify-content:flex-end;">
+        <button onclick="closeActivityModal()" style="padding:8px 20px;border:1.5px solid var(--border-color);border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;background:var(--card-bg);color:var(--text-muted);">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SỬA THÔNG TIN GIẢNG VIÊN (2 Tab) -->
+  
+  <!-- Feedback History Section -->
+  <div id="feedback-history" class="admin-section" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:25px;box-shadow:0 4px 12px rgba(245,158,11,.25)">💬</div>
+        <div>
+          <h2 style="margin:0;font-size:23px;font-weight:800;color:var(--text-main)">Lịch sử góp ý</h2>
+          <p style="margin:2px 0 0;font-size:15px;color:var(--text-muted)">Tất cả góp ý giữa các giảng viên trong hệ thống</p>
+        </div>
+      </div>
+      <button onclick="loadAllFeedbacks()" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,.25)">🔄 Tải lại</button>
+    </div>
+
+    <!-- Stats -->
+    <div id="fb-admin-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+
+    <!-- Filters -->
+    <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="text" id="fb-admin-search" placeholder="🔍 Tìm kiếm theo tên bài tập, giảng viên..." oninput="filterAdminFeedbacks()" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-family:inherit;background:var(--bg-color);color:var(--text-main);outline:none">
+      <select id="fb-admin-status" onchange="filterAdminFeedbacks()" style="padding:8px 12px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-family:inherit;background:var(--card-bg);color:var(--text-main);cursor:pointer;outline:none">
+        <option value="">Tất cả trạng thái</option>
+        <option value="0">⏳ Chờ xử lý</option>
+        <option value="1">✅ Đã xử lý</option>
+        <option value="2">❌ Từ chối</option>
+      </select>
+    </div>
+
+    <!-- Feedback List -->
+    <div id="fb-admin-list" style="display:flex;flex-direction:column;gap:12px">
+      <div style="text-align:center;padding:40px;color:var(--text-muted)">Đang tải dữ liệu...</div>
+    </div>
+  </div>
+
+  <div id="edit-lecturer-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+    <div style="background:var(--card-bg); border-radius:16px; width:680px; max-width:95vw; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#1e293b,#334155); padding:20px 24px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div id="edit-modal-avatar" style="width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:19px; font-weight:700; color:white;"></div>
+          <div>
+            <h3 style="margin:0; color:white; font-size:18px;" id="edit-modal-title">Chỉnh Sửa Thông Tin</h3>
+            <p style="margin:2px 0 0; font-size:14px; color:rgba(255,255,255,0.6);" id="edit-modal-subtitle">Mã: —</p>
+          </div>
+        </div>
+        <button onclick="closeEditLecturerModal()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:18px;">✕</button>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex; border-bottom:2px solid #f1f5f9; background:#fafafa; flex-shrink:0;">
+        <button id="edit-tab-info-btn" onclick="switchEditTab('info')" style="padding:14px 24px; border:none; background:transparent; font-size:16px; font-weight:600; cursor:pointer; color:#6366f1; border-bottom:2px solid #6366f1; margin-bottom:-2px;">👤 Thông Tin Cơ Bản</button>
+        <button id="edit-tab-subjects-btn" onclick="switchEditTab('subjects')" style="padding:14px 24px; border:none; background:transparent; font-size:16px; font-weight:600; cursor:pointer; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px;">📚 Môn Học &amp; Quyền</button>
+      </div>
+      <!-- Body -->
+      <div style="overflow-y:auto; flex:1; padding:24px;">
+        <!-- Tab 1: Thông tin cơ bản -->
+        <div id="edit-tab-info">
+          <input type="hidden" id="edit-gv-id">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">Mã Giảng Viên</label>
+              <input id="edit-gv-code" style="width:100%; padding:10px 12px; border:1.5px solid #6366f1; border-radius:8px; font-size:16px; box-sizing:border-box; background:white; color:var(--text-main); font-family:monospace;">
+              <div style="font-size:12px; color:#10b981; margin-top:3px;">Đã cho phép chỉnh sửa</div>
+            </div>
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">Quyền Hệ Thống</label>
+              <select id="edit-gv-quyen" style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box; background:var(--card-bg); cursor:pointer;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+                <option value="lecturer">👨‍🏫 Giảng Viên</option>
+                <option value="admin">🛡 Quản Trị Viên</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">Họ và Tên <span style="color:#ef4444;">*</span></label>
+            <input id="edit-gv-name" type="text" placeholder="Nguyễn Văn A" style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">Tên Đăng Nhập <span style="color:#ef4444;">*</span></label>
+              <input id="edit-gv-username" type="text" placeholder="GV01" style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box; font-family:monospace;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+              <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">Dùng để đăng nhập vào hệ thống</div>
+            </div>
+            <div>
+              <label style="font-size:15px; font-weight:600; color:var(--text-main); display:block; margin-bottom:6px;">Email</label>
+              <input id="edit-gv-email" type="email" placeholder="gv@school.edu.vn" style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:16px; box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+          </div>
+          <div style="background:var(--card-bg,#fff)beb; border:1.5px solid #fde68a; border-radius:10px; padding:16px;">
+            <div style="font-size:15px; font-weight:600; color:#92400e; margin-bottom:10px;">🔑 Đổi Mật Khẩu <span style="font-weight:400; color:#a16207;">(để trống nếu không đổi)</span></div>
+            <div style="position:relative;">
+              <input id="edit-gv-pass" type="password" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)" style="width:100%; padding:10px 12px; border:1.5px solid #fde68a; border-radius:8px; font-size:16px; box-sizing:border-box; padding-right:42px; background:var(--card-bg);" onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#fde68a'">
+              <span onclick="togglePwdVisibàility('edit-gv-pass',this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:17px; color:var(--text-muted);">👁</span>
+            </div>
+          </div>
+        </div>
+        <!-- Tab 2: Môn học & Quyền -->
+        <div id="edit-tab-subjects" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="font-size:16px; font-weight:600; color:var(--text-main);">Danh sách môn đang phụ trách</div>
+            <button onclick="showAddSubjectToGV()" style="padding:7px 14px; background:#6366f1; color:white; border:none; border-radius:7px; font-size:15px; font-weight:600; cursor:pointer;">+ Thêm môn</button>
+          </div>
+          <div id="edit-subjects-list" style="margin-bottom:16px;"></div>
+          <div id="edit-add-subject-picker" style="display:none; border:1.5px dashed #e2e8f0; border-radius:10px; padding:14px; background:var(--bg-color);">
+            <div style="font-size:15px; color:var(--text-muted); margin-bottom:10px;">Chọn môn học để thêm:</div>
+            <div id="edit-add-subject-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+            <button onclick="confirmAddSubjectsToGV()" style="padding:8px 16px; background:#10b981; color:white; border:none; border-radius:7px; font-size:15px; font-weight:600; cursor:pointer;">✅ Xác nhận thêm</button>
+            <button onclick="document.getElementById('edit-add-subject-picker').style.display='none'" style="padding:8px 14px; background:transparent; color:var(--text-muted); border:none; font-size:15px; cursor:pointer; margin-left:6px;">Hủy</button>
+          </div>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div style="padding:16px 24px; border-top:1px solid #f1f5f9; display:flex; gap:10px; justify-content:flex-end; background:#fafafa; flex-shrink:0;">
+        <button onclick="closeEditLecturerModal()" style="padding:10px 20px; border:1.5px solid #e2e8f0; border-radius:8px; background:var(--card-bg); color:var(--text-muted); font-size:16px; font-weight:600; cursor:pointer;">Hủy</button>
+        <button id="save-edit-info-btn" onclick="saveEditLecturerInfo()" style="padding:10px 24px; background:linear-gradient(135deg,#6366f1,#818cf8); color:white; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(99,102,241,0.3);">💾 Lưu Thay Đổi</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- MODAL: HỒ SƠ GIẢNG VIÊN -->
+  <div id="gv-profile-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9100; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+    <div style="background:var(--card-bg); border-radius:16px; width:620px; max-width:95vw; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0f172a,#1e293b); padding:20px 24px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div id="profile-avatar" style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:21px; font-weight:700; color:white;"></div>
+          <div>
+            <h3 id="profile-name" style="margin:0; color:white; font-size:18px;">Đang tải...</h3>
+            <p id="profile-sub" style="margin:3px 0 0; font-size:14px; color:rgba(255,255,255,0.6);"></p>
+          </div>
+        </div>
+        <button onclick="closeProfileModal()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:18px;">✕</button>
+      </div>
+      <!-- Stats row -->
+      <div id="profile-stats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-bottom:1px solid #f1f5f9; flex-shrink:0;"></div>
+      <!-- Body -->
+      <div style="overflow-y:auto; flex:1; padding:20px 24px;">
+        <!-- 2 columns -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+          <!-- Đăng nhập gần đây -->
+          <div>
+            <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:10px; display:flex; align-items:center; gap:6px;">🔑 Đăng Nhập Gần Đây</div>
+            <div id="profile-logins" style="display:flex; flex-direction:column; gap:6px;"></div>
+          </div>
+          <!-- Bài tập gần đây -->
+          <div>
+            <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:10px; display:flex; align-items:center; gap:6px;">📝 Bài Tập Gần Đây</div>
+            <div id="profile-exercises" style="display:flex; flex-direction:column; gap:6px;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div style="padding:14px 24px; border-top:1px solid #f1f5f9; display:flex; gap:8px; justify-content:flex-end; background:#fafafa; flex-shrink:0;">
+        <button onclick="openEditLecturerModal(document.getElementById('profile-modal-gv-id').value)"
+          style="padding:9px 18px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">✏️ Sửa Thông Tin</button>
+        <button onclick="closeProfileModal()"
+          style="padding:9px 18px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">Đóng</button>
+        <input type="hidden" id="profile-modal-gv-id">
+      </div>
+    </div>
+  </div><!-- /admin-wrapper -->
+  <!-- ═══════════════════════════════════ -->
+  <!-- MODAL: CHI TIẾT BÀI TẬP (ADMIN)   -->
+  <!-- ═══════════════════════════════════ -->
+  <div id="admin-exercise-modal" style="display:none; position:fixed; inset:0; z-index:2200; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); overflow-y:auto;">
+    <div style="max-width:720px; margin:40px auto; background:var(--card-bg); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.2); overflow:hidden; animation:fadeInScale 0.25s ease;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#6366f1,#818cf8); padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; background:rgba(255,255,255,0.2); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:21px;">📝</div>
+          <div>
+            <h2 id="admin-ex-modal-title" style="margin:0; font-size:19px; font-weight:700; color:white;">Chi tiết bài tập</h2>
+            <div id="admin-ex-modal-id" style="font-size:14px; color:rgba(255,255,255,0.75); margin-top:2px; font-family:monospace;"></div>
+          </div>
+        </div>
+        <button onclick="closeAdminExModal()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:36px; height:36px; border-radius:8px; font-size:21px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+      </div>
+      <!-- Body -->
+      <div id="admin-ex-modal-body" style="padding:24px; max-height:70vh; overflow-y:auto;">
+        <div style="text-align:center; padding:40px; color:var(--text-muted);">Đang tải...</div>
+      </div>
+      <!-- Footer -->
+      <div style="padding:14px 24px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; background:#fafafa;">
+        <button onclick="closeAdminExModal()" style="padding:9px 20px; background:var(--bg-color); color:var(--text-muted); border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;">Đóng</button>
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes fadeInScale { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+  
+    /* Sidebar collapse */
+    .admin-sidebar {
+      transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1);
+      overflow: hidden;
+    }
+    .admin-sidebar.collapsed {
+      width: 64px !important;
+      min-width: 64px !important;
+    }
+    .admin-sidebar.collapsed .menu-group.menu-label { display: none; }
+    .admin-sidebar.collapsed .menu-item {
+      font-size: 0 !important;
+      padding: 10px 0 !important;
+      justify-content: center !important;
+      border-radius: 10px !important;
+      margin: 2px 6px !important;
+      position: relative;
+    }
+    .admin-sidebar.collapsed .menu-item span:first-child {
+      font-size:21px !important;
+      margin: 0 !important;
+    }
+    .admin-sidebar.collapsed .menu-item:hover::after {
+      content: attr(data-section);
+      position: absolute;
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: #1e293b;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size:14px;
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 9999;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    }
+    .admin-sidebar.collapsed .brand-lecturer span:last-child { display: none; }
+    .admin-sidebar.collapsed .brand-lecturer {
+      justify-content: center !important;
+      padding: 16px 8px 12px !important;
+    }
+    .admin-sidebar.collapsed > div:first-child {
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 0 !important;
+    }
+    .admin-sidebar.collapsed #sidebar-toggle {
+      width: 28px; height: 28px;
+      transform: rotate(180deg);
+    }
+    .admin-sidebar.collapsed nav { padding: 8px 0 !important; }
+    .admin-sidebar.collapsed .menu-lecturer { padding: 0 !important; }
+    /* Footer when collapsed */
+    .admin-sidebar.collapsed > div:last-child {
+      padding: 8px 4px !important;
+    }
+    .admin-sidebar.collapsed > div:last-child > div:first-child > div:last-child { display: none; }
+    .admin-sidebar.collapsed > div:last-child button {
+      font-size: 0 !important;
+      padding: 8px !important;
+      justify-content: center;
+    }
+    .admin-sidebar.collapsed > div:last-child button span { font-size:16px !important; }
+  </style>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MODAL: Khóa Tài Khoản Giảng Viên                   -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="lock-gv-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);overflow-y:auto;">
+    <div style="max-width:560px;margin:40px auto;background:var(--card-bg);border-radius:18px;box-shadow:0 24px 64px rgba(0,0,0,0.3);overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#ef4444,#dc2626);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h2 style="margin:0;font-size:18px;font-weight:700;color:white;">🔒 Khóa Tài Khoản Giảng Viên</h2>
+          <p id="lock-gv-subtitle" style="margin:4px 0 0;font-size:15px;color:rgba(255,255,255,0.8);">Điền đầy đủ thông tin để xác nhận</p>
+        </div>
+        <button onclick="closeLockModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:9px;font-size:21px;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">&times;</button>
+      </div>
+
+      <!-- GV Info Banner -->
+      <div id="lock-gv-info" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border-bottom:1px solid #fecaca;padding:14px 24px;display:flex;align-items:center;gap:14px;">
+        <div id="lock-gv-avatar" style="width:44px;height:44px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:white;flex-shrink:0;">?</div>
+        <div>
+          <div id="lock-gv-name" style="font-size:17px;font-weight:700;color:#991b1b;">—</div>
+          <div id="lock-gv-meta" style="font-size:14px;color:#b91c1c;margin-top:2px;">—</div>
+        </div>
+      </div>
+
+      <!-- Form Body -->
+      <div style="padding:24px;">
+        <!-- Lý do -->
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:15px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Lý do khóa <span style="color:#ef4444;">*</span></label>
+          <select id="lock-reason-preset" onchange="applyLockReasonPreset()" style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:10px;font-size:16px;color:var(--text-main);background:var(--card-bg);margin-bottom:8px;cursor:pointer;">
+            <option value="">-- Chọn lý do --</option>
+            <option value="Vi phạm nội quy hệ thống">📵 Vi phạm nội quy hệ thống</option>
+            <option value="Nội dung bài tập không phù hợp">🚫 Nội dung bài tập không phù hợp</option>
+            <option value="Tài khoản bị xâm phạm - tạm khóa bảo mật">🔐 Tài khoản bị xâm phạm - bảo mật</option>
+            <option value="Tạm nghỉ theo yêu cầu">⏸️ Tạm nghỉ theo yêu cầu</option>
+            <option value="Chuyển khoa / đơn vị công tác">🔄 Chuyển khoa / đơn vị</option>
+            <option value="other">✏️ Lý do khác (nhập tay)...</option>
+          </select>
+          <textarea id="lock-reason-text" placeholder="Mô tả chi tiết lý do khóa tài khoản..." rows="3" style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:10px;font-size:16px;color:var(--text-main);background:var(--card-bg);resize:vertical;box-sizing:border-box;display:none;"></textarea>
+        </div>
+
+        <!-- Thời hạn -->
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:15px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Thời hạn khóa <span style="color:#ef4444;">*</span></label>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">
+            <button class="lock-dur-btn" onclick="selectDuration(this,'7 ngày',7)" style="padding:9px 4px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-weight:600;cursor:pointer;background:var(--card-bg);color:var(--text-main);transition:all 0.2s;">7 ngày</button>
+            <button class="lock-dur-btn" onclick="selectDuration(this,'30 ngày',30)" style="padding:9px 4px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-weight:600;cursor:pointer;background:var(--card-bg);color:var(--text-main);transition:all 0.2s;">30 ngày</button>
+            <button class="lock-dur-btn" onclick="selectDuration(this,'90 ngày',90)" style="padding:9px 4px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-weight:600;cursor:pointer;background:var(--card-bg);color:var(--text-main);transition:all 0.2s;">90 ngày</button>
+            <button class="lock-dur-btn" onclick="selectDuration(this,'Vĩnh viễn',0)" style="padding:9px 4px;border:1.5px solid var(--border-color);border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;background:var(--card-bg);color:var(--text-main);transition:all 0.2s;">Vĩnh viễn</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="lock-dur-btn" onclick="selectDuration(this,'custom',null)" style="padding:8px 14px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;font-weight:600;cursor:pointer;background:var(--card-bg);color:var(--text-main);white-space:nowrap;transition:all 0.2s;">📅 Tùy chọn</button>
+            <input type="date" id="lock-custom-date" style="flex:1;padding:8px 12px;border:1.5px solid var(--border-color);border-radius:9px;font-size:15px;color:var(--text-main);background:var(--card-bg);display:none;" onchange="updateLockUntilFromDate()">
+          </div>
+          <div id="lock-until-preview" style="margin-top:8px;font-size:14px;color:var(--text-muted);display:none;"></div>
+        </div>
+
+        <!-- Hidden state -->
+        <input type="hidden" id="lock-gv-id">
+        <input type="hidden" id="lock-duration-val">
+        <input type="hidden" id="lock-until-val">
+
+        <!-- Footer Buttons -->
+        <div style="display:flex;gap:10px;margin-top:6px;">
+          <button onclick="closeLockModal()" style="flex:1;padding:11px;border:1.5px solid var(--border-color);border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;background:var(--bg-color);color:var(--text-muted);">Hủy bỏ</button>
+          <button onclick="confirmLockGV()" style="flex:2;padding:11px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;box-shadow:0 4px 14px rgba(239,68,68,0.4);">🔒 Xác nhận Khóa</button>
+        </div>
+      </div>
+
+      <!-- Lock History Tab -->
+      <div style="border-top:1px solid var(--border-color);">
+        <div style="padding:14px 24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleLockHistory()" id="lock-history-toggle">
+          <span style="font-size:15px;font-weight:700;color:var(--text-muted);">📋 Lịch sử khóa</span>
+          <span id="lock-history-arrow" style="font-size:14px;color:var(--text-muted);">▼ Xem</span>
+        </div>
+        <div id="lock-history-panel" style="display:none;padding:0 24px 16px;max-height:220px;overflow-y:auto;">
+          <div id="lock-history-tbody" style="font-size:15px;color:var(--text-muted);text-align:center;padding:16px;">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MODAL: Xác nhận Mở Khóa GV                         -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="unlock-gv-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;">
+    <div style="max-width:420px;width:90%;background:var(--card-bg);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#10b981,#059669);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:18px;font-weight:700;color:white;">🔓 Mở Khóa Tài Khoản</h2>
+        <button onclick="closeUnlockModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:8px;font-size:19px;cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:22px 24px;">
+        <p id="unlock-gv-text" style="margin:0 0 20px;font-size:16px;color:var(--text-main);line-height:1.6;"></p>
+        <input type="hidden" id="unlock-gv-id">
+        <div style="display:flex;gap:10px;">
+          <button onclick="closeUnlockModal()" style="flex:1;padding:10px;border:1.5px solid var(--border-color);border-radius:9px;font-size:16px;font-weight:600;cursor:pointer;background:var(--bg-color);color:var(--text-muted);">Hủy</button>
+          <button onclick="confirmUnlockGV()" style="flex:2;padding:10px;border:none;border-radius:9px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#10b981,#059669);color:white;box-shadow:0 4px 14px rgba(16,185,129,0.4);">🔓 Xác nhận Mở Khóa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPORT PREVIEW MODAL -->
+  <div id="import-preview-modal" style="display:none;position:fixed;inset:0;z-index:3500;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);align-items:center;justify-content:center;">
+    <div style="max-width:800px;width:95%;max-height:90vh;background:var(--card-bg);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;">
+      <div style="background:linear-gradient(135deg,#10b981,#059669);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:18px;font-weight:700;color:white;">📥 Duyệt Dữ Liệu Import</h2>
+        <button onclick="closeImportPreview()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:8px;font-size:19px;cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:22px 24px; overflow-y:auto; flex:1;">
+        <p style="margin:0 0 15px; font-size:16px; color:var(--text-muted);">
+          Dưới đây là danh sách các bài tập được tìm thấy trong file Excel. Vui lòng kiểm tra kỹ trước khi xác nhận lưu vào hệ thống. 
+          Các bài tập không có Mã Bài Tập sẽ được <b>thêm mới</b>, các bài có mã sẽ được <b>ghi đè</b>.
+        </p>
+        <div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:10px;">
+          <table style="width:100%; border-collapse:collapse; font-size:15px; text-align:left;">
+            <thead>
+              <tr style="background:var(--bg-color); border-bottom:2px solid var(--border-color);">
+                <th style="padding:10px; color:var(--text-muted);">STT</th>
+                <th style="padding:10px; color:var(--text-muted);">Mã Bài Tập</th>
+                <th style="padding:10px; color:var(--text-muted);">Tên Bài Tập</th>
+                <th style="padding:10px; color:var(--text-muted);">Hành Động</th>
+                <th style="padding:10px; color:var(--text-muted);">Trạng Thái</th>
+              </tr>
+            </thead>
+            <tbody id="import-preview-tbody">
+              <!-- Rows inserted by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="padding:16px 24px; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:10px; background:var(--bg-color);">
+        <button onclick="closeImportPreview()" style="padding:10px 20px; border:1.5px solid var(--border-color); border-radius:9px; font-size:16px; font-weight:600; cursor:pointer; background:var(--card-bg); color:var(--text-muted);">Hủy</button>
+        <button id="import-confirm-btn" onclick="confirmImport()" style="padding:10px 20px; border:none; border-radius:9px; font-size:16px; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; box-shadow:0 4px 14px rgba(16,185,129,0.4);">✅ Xác nhận Lưu Dữ Liệu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin.js?v=74"></script>
+  <script src="/ai-features.js"></script>
+  <script src="/dark-mode.js"></script>
+  <script src="/duplicate-client.js"></script>
+  <script>
+function toggleSidebar() {
+  const sidebar = document.querySelector('.admin-sidebar');
+  if (!sidebar) return;
+  sidebar.classList.toggle('collapsed');
+  const btn = document.getElementById('sidebar-toggle');
+  if (btn) btn.title = sidebar.classList.contains('collapsed') ? 'Mở menu' : 'Thu gọn menu';
+  try { localStorage.setItem('admin-sidebar-collapsed', sidebar.classList.contains('collapsed')); } catch(e){}
+}
+// Restore sidebar state
+try { if (localStorage.getItem('admin-sidebar-collapsed') === 'true') { const s=document.querySelector('.admin-sidebar'); if(s) s.classList.add('collapsed'); }} catch(e){}
+</script>
+</body>
+
+</html>

@@ -1,13 +1,90 @@
-:root{
-  --primary: #3F51B5;
+/* ─── Design System Variables (Light Mode) ─── */
+:root {
+  /* Primary colours */
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-light: rgba(99,102,241,0.1);
+
+  /* Backgrounds */
   --bg: #F0F2F5;
-  --accent: #FF9800;
-  --text: #222;
+  --bg-color: #f8fafc;
   --card: #fff;
-  --font: 'PT Sans', sans-serif;
+  --card-bg: #ffffff;
+  --sidebar-bg: #ffffff;
+
+  /* Text */
+  --text: #222;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+
+  /* Borders */
+  --border-color: #e2e8f0;
+
+  /* Accent */
+  --accent: #FF9800;
+
+  /* Status */
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --info: #2563eb;
+  --info-light: #dbeafe;
+
+  /* Sidebar admin */
+  --sidebar-width: 220px;
+  --sidebar-text: #374151;
+  --sidebar-muted: #6b7280;
+
+  /* Font */
+  --font: 'Inter', 'PT Sans', sans-serif;
 }
+
+/* ─── Dark Mode ─── */
+body.dark-mode {
+  --bg: #0f1724;
+  --bg-color: #0f1724;
+  --card: #0b1220;
+  --card-bg: #1e293b;
+  --sidebar-bg: #0b1220;
+  --text: #e6eef8;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border-color: #1f2937;
+  --primary-light: rgba(99,102,241,0.15);
+  --sidebar-text: #cbd5e1;
+  --sidebar-muted: #64748b;
+}
+
+/* Admin dark mode preload (applied to <html> before body loads to prevent flash) */
+.dark-mode-preload { background: #0f1724; }
+
+
+/* ─── Reset & Font ─── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *{box-sizing:border-box}
+
 body{font-family:var(--font);margin:0;background:var(--bg);color:var(--text)}
+
+/* ─── Admin layout ─── */
+.admin-wrapper{display:flex;min-height:100vh;width:100%;overflow-x:hidden}
+.sidebar-lecturer{width:var(--sidebar-width,220px);background:var(--sidebar-bg,#fff);border-right:1px solid var(--border-color);display:flex;flex-direction:column;position:fixed;height:100vh;overflow-y:auto;z-index:100;transition:background 0.3s}
+.admin-main{flex:1;margin-left:var(--sidebar-width,220px);overflow-x:hidden;min-height:100vh;background:var(--bg-color,#f8fafc);width:calc(100% - var(--sidebar-width,220px))}
+.admin-content{padding:28px 32px;max-width:100%;box-sizing:border-box}
+.admin-modal{display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);justify-content:center;align-items:center}
+.admin-modal.show{display:flex}
+.admin-section{display:none}.admin-section.active{display:block}
+.section-title{font-size:23px;font-weight:800;color:var(--text-main);margin:0 0 6px}
+.admin-table{width:100%;border-collapse:collapse}
+.admin-table th{text-align:left;padding:12px 16px;font-size:14px;font-weight:700;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border-color)}
+.admin-table td{padding:14px 16px;border-bottom:1px solid var(--border-color);color:var(--text-main);font-size:16px;vertical-align:middle}
+.admin-table tbody tr:hover{background:var(--primary-light)}
+.theme-toggle-btn{background:var(--card-bg,#fff);border:1px solid var(--border-color);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--text-muted);transition:all 0.2s}
+.theme-toggle-btn:hover{background:var(--primary-light)}
+
+
 .sidebar{width:260px;position:fixed;left:0;top:0;bottom:0;background:var(--card);padding:20px;border-right:1px solid #e6e9ee}
 .brand{font-weight:700;color:var(--primary);margin-bottom:12px}
 .sidebar ul{list-style:none;padding:0;margin:0}
@@ -18,27 +95,27 @@ body{font-family:var(--font);margin:0;background:var(--bg);color:var(--text)}
 #main-header{display:flex;align-items:center;justify-content:space-between}
 #forms-container{margin-top:16px}
 .form-card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:18px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 6px 18px rgba(2,6,23,0.03)}
-.form-card h3{margin:0 0 8px;color:var(--primary);font-size:18px}
+.form-card h3{margin:0 0 8px;color:var(--primary);font-size:19px}
 
 /* subject summary bar shown above forms */
-.subject-summary{background:#fff;padding:10px 14px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);margin-bottom:14px;display:flex;gap:18px;align-items:center}
-.subject-summary .summary-item{font-size:14px;color:#333}
+.subject-summary{background:var(--card-bg,#fff);padding:10px 14px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);margin-bottom:14px;display:flex;gap:18px;align-items:center}
+.subject-summary .summary-item{font-size:16px;color:var(--text-main)}
 .subject-summary .summary-item .key{font-weight:700;color:var(--primary);margin-right:6px}
 .exercise-item{padding:8px;border-radius:6px;margin:6px 0;display:flex;justify-content:space-between;align-items:center}
 .exercise-item .title{cursor:pointer}
 .exercise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin-top:16px}
 .exercise-card{background:var(--card);padding:18px;border-radius:12px;border:1px solid rgba(0,0,0,0.06);cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:150px;transition:transform .18s ease,box-shadow .18s ease}
 .exercise-card:hover{box-shadow:0 14px 40px rgba(2,6,23,0.08);transform:translateY(-6px)}
-.exercise-title{font-weight:700;font-size:18px;color:var(--primary)}
-.exercise-desc{font-size:14px;color:#4b5563}
+.exercise-title{font-weight:700;font-size:19px;color:var(--primary)}
+.exercise-desc{font-size:16px;color:var(--text-muted)}
 .exercise-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;gap:12px}
-.small{font-size:12px;color:#6b7280}
+.small{font-size:14px;color:var(--text-muted)}
 .muted{color:#9aa0a6}
-.badge{background:#f3f3f3;padding:6px 10px;border-radius:12px;font-size:13px}
+.badge{background:#f3f3f3;padding:6px 10px;border-radius:12px;font-size:15px}
 
 /* difficulty tag styles */
-.difficulty-tag{display:inline-block;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;color:#0b6f3a;background:#e6f4ea;border:1px solid #cdeed0}
-.difficulty-tag.medium{color:#b45f00;background:#fff4e5;border:1px solid #ffe2b8}
+.difficulty-tag{display:inline-block;padding:6px 10px;border-radius:8px;font-weight:700;font-size:14px;color:#0b6f3a;background:#e6f4ea;border:1px solid #cdeed0}
+.difficulty-tag.medium{color:#b45f00;background:var(--card-bg,#fff)4e5;border:1px solid #ffe2b8}
 .difficulty-tag.hard{color:#a31f1f;background:#fdecea;border:1px solid #f6c8c8}
 
 /* grid spacing tweaks for modern card layout */
@@ -46,7 +123,7 @@ body{font-family:var(--font);margin:0;background:var(--bg);color:var(--text)}
 
 /* difficulty colors */
 .badge.easy{background:#e6f4ea;color:#0b6f3a;border:1px solid #cdeed0}
-.badge.medium{background:#fff4e5;color:#b45f00;border:1px solid #ffe2b8}
+.badge.medium{background:var(--card-bg,#fff)4e5;color:#b45f00;border:1px solid #ffe2b8}
 .badge.hard{background:#fdecea;color:#a31f1f;border:1px solid #f6c8c8}
 
 /* ensure primary and accent used for headings and buttons */
@@ -61,7 +138,7 @@ h1, h2, h3 {font-family:var(--font);color:var(--primary)}
 /* right-side panel for exercise detail */
 #exercise-detail{position:fixed;right:0;top:0;height:100vh;width:520px;max-width:96vw;z-index:1100;transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow: -8px 0 24px rgba(2,6,23,0.12);overflow:auto;padding:22px;background:var(--card);border-left:1px solid rgba(0,0,0,0.06)}
 #exercise-detail.open{transform:translateX(0)}
-#exercise-detail .close-ex{position:absolute;left:8px;top:8px;border:none;background:transparent;font-size:24px;cursor:pointer}
+#exercise-detail .close-ex{position:absolute;left:8px;top:8px;border:none;background:transparent;font-size:25px;cursor:pointer}
 
 /* content inside panel should scroll if long */
 #exercise-detail .content{padding-top:28px}
@@ -69,17 +146,17 @@ h1, h2, h3 {font-family:var(--font);color:var(--primary)}
 
 /* exercise detail modal (centered) */
 #exercise-detail.open{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1200;background:var(--card);padding:28px;border-radius:12px;max-width:960px;max-height:86vh;overflow:auto;border:1px solid #e6e9ee;box-shadow:0 30px 70px rgba(31,41,55,0.24)}
-#exercise-detail.open .close-ex{position:absolute;right:18px;top:14px;border:none;background:transparent;font-size:24px;cursor:pointer}
+#exercise-detail.open .close-ex{position:absolute;right:18px;top:14px;border:none;background:transparent;font-size:25px;cursor:pointer}
 
 /* modal typography improvements */
-#exercise-detail h2{font-size:22px;margin:0 0 8px}
-#exercise-detail .badge{font-size:13px;padding:6px 12px}
+#exercise-detail h2{font-size:23px;margin:0 0 8px}
+#exercise-detail .badge{font-size:15px;padding:6px 12px}
 #exercise-detail .section{margin-top:18px;border-top:1px solid #eef2f6;padding-top:14px}
 #exercise-detail .meta-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
 #exercise-detail .meta-row .meta-item{min-width:150px}
-#exercise-detail .meta-item strong{display:inline-block;width:110px;color:#374151}
-#exercise-detail p, #exercise-detail li{font-size:15px;line-height:1.5;color:#374151}
-#exercise-detail .small.muted{font-size:13px;color:#6b7280}
+#exercise-detail .meta-item strong{display:inline-block;width:110px;color:var(--text-main)}
+#exercise-detail p, #exercise-detail li{font-size:17px;line-height:1.5;color:var(--text-main)}
+#exercise-detail .small.muted{font-size:15px;color:var(--text-muted)}
 #exercise-detail ul{padding-left:20px;margin:8px 0}
 #exercise-detail li{margin-bottom:8px}
 
@@ -104,7 +181,7 @@ button{cursor:pointer}
 .modal-content{background:var(--card);padding:16px;border-radius:8px;width:720px;max-height:80vh;overflow:auto}
 .modal-content.large{width:920px}
 /* modal close button */
-.modal-close{position:absolute;right:12px;top:12px;border:none;background:transparent;font-size:22px;line-height:1;color:#666;cursor:pointer}
+.modal-close{position:absolute;right:12px;top:12px;border:none;background:transparent;font-size:23px;line-height:1;color:#666;cursor:pointer}
 .modal-close:hover{color:#000}
 
 /* modal header and text close button */
@@ -112,14 +189,14 @@ button{cursor:pointer}
 .modal-header h2{margin:0 0 12px}
 .modal-close-text{position:absolute;right:48px;top:10px;background:#f3f3f3;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
 .modal-close-text:hover{background:#eee}
-form label{display:block;margin-top:8px;font-size:13px}
+form label{display:block;margin-top:8px;font-size:15px}
 form input, form textarea, form select{width:100%;padding:8px;margin-top:4px;border:1px solid #ddd;border-radius:6px}
 .panel-actions{display:flex;gap:8px;margin:8px 0}
 .lecturer-login{position:absolute;bottom:20px;left:20px}
 
 /* lecturer manage table */
-.manage-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:6px;overflow:hidden}
-.manage-table th, .manage-table td{padding:10px 12px;border-bottom:1px solid #f1f3f5;text-align:left;vertical-align:middle;font-size:14px}
+.manage-table{width:100%;border-collapse:collapse;background:var(--card-bg,#fff);border:1px solid rgba(0,0,0,0.06);border-radius:6px;overflow:hidden}
+.manage-table th, .manage-table td{padding:10px 12px;border-bottom:1px solid #f1f3f5;text-align:left;vertical-align:middle;font-size:16px}
 .manage-table tbody tr:hover{background:#fafbfd}
 .btn-edit{background:#28a745;color:#fff;border:none;padding:6px 10px;border-radius:4px}
 .btn-delete{background:#dc3545;color:#fff;border:none;padding:6px 10px;border-radius:4px}

@@ -4,46 +4,113 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ngân hàng Bài tập</title>
-  <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    /* Dark mode */
+    body.dark-mode { --bg-main:#0f172a; --bg-sidebar:#1e293b; --bg-card:#1e293b; --border:#334155; --text-main:#e2e8f0; --text-muted:#94a3b8; --text-heading:#f1f5f9; }
+    body:not(.dark-mode) { --bg-main:#f8fafc; --bg-sidebar:#fff; --bg-card:#fff; --border:#e2e8f0; --text-main:#1e293b; --text-muted:#64748b; --text-heading:#0f172a; }
+    #app { display:flex; min-height:100vh; background:var(--bg-main); }
+    .sidebar { width:260px; background:var(--bg-sidebar); border-right:1px solid var(--border); padding:20px 16px; overflow-y:auto; flex-shrink:0; }
+    .sidebar .brand { font-size:19px; font-weight:800; color:#6366f1; margin-bottom:20px; padding:0 8px; }
+    #subject-list { list-style:none; padding:0; margin:0; }
+    #subject-list li { padding:10px 14px; border-radius:10px; cursor:pointer; font-size:16px; font-weight:500; color:var(--text-main); margin-bottom:4px; transition:all .15s; }
+    #subject-list li:hover { background:#6366f120; }
+    #subject-list li.active { background:linear-gradient(135deg,#6366f1,#818cf8); color:#fff; font-weight:700; }
+    .main { flex:1; padding:24px 32px; overflow-y:auto; }
+    #main-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:8px; }
+    #subject-title { font-size:25px; font-weight:800; color:var(--text-heading); margin:0; }
+    #header-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    #header-controls input, #header-controls select {
+      padding:9px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:15px;
+      font-family:inherit; background:var(--bg-card); color:var(--text-main); outline:none;
+    }
+    #header-controls input { min-width:220px; }
+    #theme-toggle { width:38px; height:38px; border-radius:10px; border:1.5px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:19px; cursor:pointer; }
+    .subject-summary { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+    .stat-card { flex:1; min-width:130px; border-radius:14px; padding:16px 18px; color:#fff; border:none !important; box-shadow:0 4px 14px rgba(0,0,0,.12); position:relative; overflow:hidden; }
+    .stat-card::after { content:''; position:absolute; top:-20px; right:-20px; width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,.1); }
+    .stat-card .stat-label { font-size:14px; font-weight:600; opacity:.85; margin-bottom:2px; }
+    .stat-card .stat-value { font-size:30px; font-weight:800; line-height:1.1; }
+    .form-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; margin-bottom:20px; overflow:hidden; }
+    .form-card h3 { margin:0; padding:16px 20px; font-size:17px; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border); background:var(--bg-main); }
+    .exercise-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; padding:16px 20px; }
+    .exercise-card {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px; cursor:pointer;
+      transition:all .2s; position:relative; overflow:hidden;
+    }
+    .exercise-card:hover { border-color:#6366f1; box-shadow:0 4px 16px rgba(99,102,241,.15); transform:translateY(-2px); }
+    .exercise-title { font-size:17px; font-weight:700; color:var(--text-heading); line-height:1.4; margin-bottom:6px; }
+    .exercise-meta-line { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+    .meta-badge { font-size:12px; font-weight:600; padding:3px 8px; border-radius:6px; }
+    .exercise-desc { font-size:15px; color:var(--text-muted); line-height:1.5; margin-bottom:10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .exercise-footer { display:flex; justify-content:space-between; align-items:center; font-size:14px; color:var(--text-muted); }
+    .exercise-footer .counts { display:flex; gap:10px; }
+    .badge-easy { background:#dcfce7; color:#166534; }
+    .badge-medium { background:#fef9c3; color:#854d0e; }
+    .badge-hard { background:#fee2e2; color:#991b1b; }
+    .badge-level { border:1px solid; font-weight:800; }
+    .badge-l1 { background:#10b98120; color:#10b981; border-color:#10b98144; }
+    .badge-l2 { background:#06b6d420; color:#06b6d4; border-color:#06b6d444; }
+    .badge-l3 { background:#f59e0b20; color:#f59e0b; border-color:#f59e0b44; }
+    .badge-l4 { background:#f9731620; color:#f97316; border-color:#f9731644; }
+    .badge-l5 { background:#8b5cf620; color:#8b5cf6; border-color:#8b5cf644; }
+    .badge-format { background:#ede9fe; color:#7c3aed; }
+    /* Detail panel overlay */
+    #exercise-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1098; backdrop-filter:blur(6px); }
+    #exercise-overlay.show { display:block; }
+    #exercise-detail { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.95); opacity:0; z-index:1099; width:700px; max-width:95vw; max-height:90vh; overflow-y:auto; background:var(--bg-card); border-radius:18px; border:none; box-shadow:0 25px 80px rgba(0,0,0,.35); transition:all .25s ease; }
+    #exercise-detail.open { transform:translate(-50%,-50%) scale(1); opacity:1; }
+    #exercise-detail.hidden { display:none; }
+    #exercise-detail .detail-header { background:linear-gradient(135deg,#6366f1,#8b5cf6); padding:22px 28px; border-radius:18px 18px 0 0; position:relative; }
+    #exercise-detail .close-ex { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.15); border:none; font-size:21px; cursor:pointer; color:#fff; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+    #exercise-detail .close-ex:hover { background:rgba(255,255,255,.3); }
+    #exercise-detail .detail-header h2 { margin:0; font-size:21px; font-weight:800; color:#fff; padding:0; }
+    #exercise-detail .detail-header .detail-sub { font-size:15px; color:rgba(255,255,255,.75); margin-top:4px; }
+    #exercise-detail .detail-meta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; padding:18px 24px; }
+    #exercise-detail .detail-meta-card { border-radius:10px; padding:10px 14px; }
+    #exercise-detail .detail-meta-card .dmc-label { font-size:11px; font-weight:700; text-transform:uppercase; opacity:.7; }
+    #exercise-detail .detail-meta-card .dmc-value { font-size:16px; font-weight:700; margin-top:2px; }
+    #exercise-detail .section { padding:14px 24px; border-top:1px solid var(--border); }
+    #exercise-detail .section h3 { font-size:16px; font-weight:700; margin:0 0 10px; color:var(--text-heading); display:flex; align-items:center; gap:6px; }
+    #exercise-detail .section ul, #exercise-detail .section ol { margin:0; padding-left:20px; }
+    #exercise-detail .section li { font-size:16px; line-height:1.7; color:var(--text-main); margin-bottom:4px; }
+    #exercise-detail .section .desc-content { font-size:16px; line-height:1.7; color:var(--text-main); background:var(--bg-main); padding:14px 16px; border-radius:10px; border-left:3px solid #6366f1; }
+    .accent { padding:8px 16px; background:#6366f1; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; }
+    .accent:hover { background:#4f46e5; }
+  </style>
 </head>
 <body>
   <div id="app">
     <aside class="sidebar">
-      <div class="brand">Ngân hàng Bài tập</div>
+      <div class="brand">📚 Ngân hàng Bài tập</div>
       <ul id="subject-list"></ul>
-      <!-- lecturer login removed from student page; use /login for lecturer access -->
     </aside>
     <main class="main">
       <div id="main-header">
         <h1 id="subject-title">Chọn môn học</h1>
         <div id="header-controls">
-          <input id="search-input" placeholder="Tìm bài theo tên hoặc từ khoá..." />
-          <select id="difficulty-filter" title="Lọc theo độ khó" style="padding:8px;border-radius:8px;border:1px solid #ddd">
+          <input id="search-input" placeholder="🔍 Tìm bài tập..." />
+          <select id="difficulty-filter" title="Lọc theo độ khó">
             <option value="all">Tất cả độ khó</option>
             <option value="easy">Dễ</option>
             <option value="medium">Trung bình</option>
             <option value="hard">Khó</option>
           </select>
-          <button id="theme-toggle" title="Toggle light/dark">◐</button>
+          <button id="theme-toggle" title="Chuyển dark/light mode">◐</button>
         </div>
       </div>
 
-      <div id="subject-desc" class="subject-desc" style="margin-top:12px;color:#444"></div>
-
-      <div id="subject-summary" class="subject-summary" style="margin-top:12px"></div>
+      <div id="subject-desc" style="margin-bottom:4px;color:var(--text-muted);font-size:16px"></div>
+      <div id="subject-summary" class="subject-summary"></div>
 
       <div id="forms-container"></div>
-          <div id="pagination-control"></div>
+      <div id="pagination-control"></div>
 
-      <div id="exercise-detail" class="card hidden"></div>
+      <div id="exercise-detail" class="hidden"></div>
     </main>
   </div>
-
-  <!-- Lecturer modal removed from student page; use separate /login page for lecturers -->
-
-  <!-- Lecturer panel -->
-  <!-- Lecturer panel moved to /lecturer (separate page) -->
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>

@@ -1,5 +1,11 @@
 const API = '';
 
+// helper: escape HTML to avoid XSS when building innerHTML
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 async function fetchJSON(url, opts) {
   const res = await fetch(url, opts);
   if (!res.ok) throw new Error(await res.text());
@@ -69,13 +75,17 @@ async function loadSubjects() {
 
 function renderSidebar() {
   const ul = document.getElementById('subject-list');
-  if (!ul) return; // some pages (lecturer panel) don't include the student sidebar
+  if (!ul) return;
   ul.innerHTML = '';
   state.subjects.forEach(s => {
     const li = document.createElement('li');
-    li.textContent = `${s.subject_name} (${s.total_exercises})`;
+    const isActive = state.currentSubject && state.currentSubject.subject_id === s.subject_id;
+    li.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-weight:600; line-height:1.4;">${escapeHtml(s.subject_name)}</span>
+      ${isActive ? `<span style="font-size:16px; margin-left:8px; opacity:0.9;">✓</span>` : `<span style="font-size:12px; background:var(--border); color:var(--text-muted); padding:2px 8px; border-radius:12px; font-weight:800;">${s.total_exercises}</span>`}
+    </div>`;
     li.onclick = async () => { await selectSubject(s.subject_id); renderSidebar(); };
-    if (state.currentSubject && state.currentSubject.subject_id === s.subject_id) li.classList.add('active');
+    if (isActive) li.classList.add('active');
     ul.appendChild(li);
   });
 }
@@ -149,7 +159,28 @@ function renderSubject() {
         else if (lab === 'Trung bình') totals.medium++;
         else if (lab === 'Khó') totals.hard++;
       });
-      summaryEl.innerHTML = `<div class="summary-item"><span class="key">Tổng bài:</span> ${totals.total}</div><div class="summary-item"><span class="key">Dễ:</span> ${totals.easy}</div><div class="summary-item"><span class="key">TB:</span> ${totals.medium}</div><div class="summary-item"><span class="key">Khó:</span> ${totals.hard}</div>`;
+      summaryEl.innerHTML = `
+        <div class="stat-card" style="background:linear-gradient(135deg, #3b82f6, #2563eb);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(15deg); user-select:none;">📚</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Tổng bài tập</div>
+          <div class="stat-value">${totals.total}</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg, #10b981, #059669);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(-10deg); user-select:none;">🟢</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Mức độ Dễ</div>
+          <div class="stat-value">${totals.easy}</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg, #f59e0b, #d97706);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(10deg); user-select:none;">🟡</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Trung bình</div>
+          <div class="stat-value">${totals.medium}</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg, #ef4444, #dc2626);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(-15deg); user-select:none;">🔴</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Mức độ Khó</div>
+          <div class="stat-value">${totals.hard}</div>
+        </div>
+      `;
     }
   } catch (e) { /* ignore summary errors */ }
   const container = document.getElementById('forms-container');
@@ -173,10 +204,21 @@ function renderSubject() {
   pageForms.forEach((form, formIndex) => {
     const card = document.createElement('div');
     card.className = 'form-card';
+    card.style.background = 'transparent';
+    card.style.border = 'none';
+    card.style.boxShadow = 'none';
+    card.style.overflow = 'visible';
+
     const h = document.createElement('h3');
-    // display name as: Dạng <globalIndex> - <form.name>
+    h.style.background = 'transparent';
+    h.style.borderBottom = 'none';
+    h.style.padding = '10px 0 16px 0';
+    h.style.display = 'flex';
+    h.style.alignItems = 'center';
+    h.style.gap = '12px';
     const globalIndex = startIdx + formIndex + 1;
-    h.textContent = `Dạng ${globalIndex} - ${form.name} (${form.exercise_count})`;
+    h.innerHTML = `<span style="font-size:21px; font-weight:800; color:var(--text-heading); background:linear-gradient(90deg, #6366f1, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Dạng ${globalIndex} - ${escapeHtml(form.name)}</span>
+                   <span style="background:#e0e7ff; color:#4338ca; font-size:14px; font-weight:700; padding:4px 10px; border-radius:20px; box-shadow:0 2px 4px rgba(67,56,202,0.1);">[ ${form.exercise_count} Bài ]</span>`;
     card.appendChild(h);
     // (Removed) do not display form-level grading criteria here — show per-exercise criteria in modal only
 
@@ -233,61 +275,31 @@ function renderSubject() {
     toShow.forEach(ex => {
       const cardEl = document.createElement('div');
       cardEl.className = 'exercise-card';
-      const title = document.createElement('div');
-      title.className = 'exercise-title';
-      title.textContent = ex.title;
-
-      // small id line under title (matches screenshot)
-      const idLine = document.createElement('div');
-      idLine.className = 'small muted';
-      idLine.style.marginTop = '6px';
-      idLine.textContent = `ID: ${ex.id || ex.exercise_id || ''}`;
-
-      const desc = document.createElement('div');
-      desc.className = 'exercise-desc';
-      desc.textContent = ex.description ? (ex.description.length > 140 ? ex.description.substring(0,140) + '...' : ex.description) : '';
-
-      // meta area: left = counts (requirements, criteria), right = difficulty badge + format
-      const meta = document.createElement('div');
-      meta.className = 'exercise-meta';
-
-      const countsWrap = document.createElement('div');
-      countsWrap.className = 'exercise-counts';
-      countsWrap.style.display = 'flex';
-      countsWrap.style.gap = '12px';
-      countsWrap.style.alignItems = 'center';
-
+      cardEl.style.display = 'flex';
+      cardEl.style.flexDirection = 'column';
+      
+      const diffLabel = normalizeDifficultyLabel(ex.difficulty) || ex.difficulty || '';
       const reqCount = (ex.requirements || []).length || 0;
       const critCount = (ex.grading_criteria || []).length || 0;
-      // show as small muted labels like: 📄 1 yêu cầu  ⚖️ 2 tiêu chí
-      const reqEl = document.createElement('span'); reqEl.className = 'small muted'; reqEl.textContent = `📄 ${reqCount} yêu cầu`;
-      const critEl = document.createElement('span'); critEl.className = 'small muted'; critEl.textContent = `⚖️ ${critCount} tiêu chí`;
-      countsWrap.appendChild(reqEl);
-      countsWrap.appendChild(critEl);
-
-      const rightWrap = document.createElement('div');
-      rightWrap.style.display = 'flex'; rightWrap.style.alignItems = 'center'; rightWrap.style.gap = '8px';
-
-      const diff = document.createElement('div');
-      // normalize difficulty label for consistent badges
-      const diffLabel = normalizeDifficultyLabel(ex.difficulty) || ex.difficulty || '';
-      diff.className = 'difficulty-tag ' + (diffLabel === 'Khó' ? 'hard' : (diffLabel === 'Trung bình' ? 'medium' : 'easy'));
-      diff.textContent = diffLabel;
-
-      const format = document.createElement('span');
-      format.className = 'small';
-      format.textContent = ex.submission_format || '';
-
-      rightWrap.appendChild(diff);
-      rightWrap.appendChild(format);
-
-      meta.appendChild(countsWrap);
-      meta.appendChild(rightWrap);
-
-      cardEl.appendChild(title);
-      cardEl.appendChild(idLine);
-      cardEl.appendChild(desc);
-      cardEl.appendChild(meta);
+      
+      cardEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+          <span style="font-size:11px; font-weight:800; background:#e0e7ff; color:#4f46e5; padding:4px 10px; border-radius:12px; letter-spacing:0.5px;">${escapeHtml(ex.id || ex.exercise_id || 'ID')}</span>
+        </div>
+        <div class="exercise-title" style="font-size:18px; font-weight:700; color:var(--text-heading); line-height:1.4; margin-bottom:8px;">${escapeHtml(ex.title)}</div>
+        <div class="exercise-desc" style="font-size:15px; color:var(--text-muted); line-height:1.6; margin-bottom:16px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(ex.description ? ex.description.replace(/<[^>]*>?/gm, '') : '')}</div>
+        <div style="margin-top:auto; padding-top:14px; border-top:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; gap:12px; font-size:14px; font-weight:600; color:var(--text-muted);">
+            <span title="Yêu cầu">📄 ${reqCount}</span>
+            <span title="Tiêu chí">⚖️ ${critCount}</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="font-size:12px; font-weight:700; background:${diffLabel==='Khó'?'#fee2e2':(diffLabel==='Trung bình'?'#fef3c7':'#dcfce7')}; color:${diffLabel==='Khó'?'#991b1b':(diffLabel==='Trung bình'?'#92400e':'#166534')}; padding:4px 8px; border-radius:6px;">${escapeHtml(diffLabel)}</span>
+            ${ex.submission_format ? `<span style="font-size:12px; font-weight:600; color:var(--text-muted);">${escapeHtml(ex.submission_format)}</span>` : ''}
+          </div>
+        </div>
+      `;
+      
       cardEl.onclick = () => showExercise(ex, form);
       grid.appendChild(cardEl);
     });
@@ -296,9 +308,21 @@ function renderSubject() {
 
     if (filtered.length > SHOW_COUNT) {
       const moreBtn = document.createElement('button');
-      moreBtn.className = 'accent';
-      moreBtn.style.marginTop = '8px';
-      moreBtn.textContent = expanded ? 'Thu gọn' : `Xem thêm (${filtered.length - SHOW_COUNT})`;
+      moreBtn.style.width = '100%';
+      moreBtn.style.marginTop = '16px';
+      moreBtn.style.padding = '12px';
+      moreBtn.style.background = 'transparent';
+      moreBtn.style.color = '#6366f1';
+      moreBtn.style.border = '2px dashed #6366f1';
+      moreBtn.style.borderRadius = '12px';
+      moreBtn.style.fontSize = '14px';
+      moreBtn.style.fontWeight = '700';
+      moreBtn.style.cursor = 'pointer';
+      moreBtn.style.transition = 'all 0.2s';
+      moreBtn.onmouseover = () => { moreBtn.style.background = '#e0e7ff'; };
+      moreBtn.onmouseout = () => { moreBtn.style.background = 'transparent'; };
+      
+      moreBtn.innerHTML = expanded ? 'Thu gọn ▲' : `Xem thêm (${filtered.length - SHOW_COUNT}) ▼`;
       moreBtn.onclick = () => {
         state.expandedForms[key] = !state.expandedForms[key];
         try { localStorage.setItem('expandedForms', JSON.stringify(state.expandedForms)); } catch (e) {}
@@ -316,10 +340,23 @@ function renderSubject() {
     if ((s.forms||[]).length <= formsPerPage) { pagination.innerHTML = ''; }
     else {
       const total = totalFormPages;
-      let html = `<div style="text-align:center; margin:18px 0;">`;
-      if (state.currentPage > 1) html += `<button onclick="changeFormPage(${state.currentPage-1})" style="margin-right:8px">← Trước</button>`;
-      html += `<span style="margin:0 8px">Trang ${state.currentPage} / ${total}</span>`;
-      if (state.currentPage < total) html += `<button onclick="changeFormPage(${state.currentPage+1})" style="margin-left:8px">Tiếp →</button>`;
+      const btnStyle = `padding:8px 16px; border-radius:10px; font-size:16px; font-weight:700; cursor:pointer; border:1px solid #c7d2fe; background:var(--card-bg,#fff); color:#4f46e5; transition:all 0.2s; box-shadow:0 2px 4px rgba(0,0,0,0.02);`;
+      const disabledStyle = `padding:8px 16px; border-radius:10px; font-size:16px; font-weight:700; border:1px solid #e2e8f0; background:var(--bg-color,#f8fafc); color:var(--text-muted); cursor:not-allowed;`;
+      
+      let html = `<div style="display:flex; justify-content:center; align-items:center; gap:16px; margin:24px 0 16px;">`;
+      if (state.currentPage > 1) {
+        html += `<button onclick="changeFormPage(${state.currentPage-1})" style="${btnStyle}" onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='#fff'">← Trang trước</button>`;
+      } else {
+        html += `<button style="${disabledStyle}" disabled>← Trang trước</button>`;
+      }
+      
+      html += `<div style="font-size:16px; font-weight:600; color:var(--text-muted); background:var(--bg-main); padding:6px 16px; border-radius:20px; border:1px solid var(--border);">Trang <span style="color:#4f46e5; font-weight:800;">${state.currentPage}</span> / ${total}</div>`;
+      
+      if (state.currentPage < total) {
+        html += `<button onclick="changeFormPage(${state.currentPage+1})" style="${btnStyle}" onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='#fff'">Trang tiếp →</button>`;
+      } else {
+        html += `<button style="${disabledStyle}" disabled>Trang tiếp →</button>`;
+      }
       html += `</div>`;
       pagination.innerHTML = html;
     }
@@ -333,26 +370,29 @@ function changeFormPage(p) {
 }
 
 async function showExercise(ex, parentForm) {
-  // helper: escape HTML to avoid XSS when building innerHTML
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
   function renderGradingHtml(criteria, fallback) {
-    // if exercise criteria empty and fallback (form-level) present, use fallback
     if ((!criteria || !criteria.length) && (fallback && fallback.length)) {
       criteria = fallback;
     }
-    if (!criteria || !criteria.length) return '<div class="small muted">(Không có tiêu chí)</div>';
-    return '<ul>' + criteria.map(g => {
-      if (!g) return '<li>(Không xác định)</li>';
-      if (typeof g === 'string') return `<li>${escapeHtml(g)}</li>`;
+    if (!criteria || !criteria.length) return '<div style="font-style:italic;color:var(--text-muted);text-align:center;padding:16px">(Chưa có tiêu chí)</div>';
+    
+    const totalPts = criteria.reduce((sum, c) => sum + (typeof c.points === 'number' ? c.points : 0), 0);
+
+    const listHtml = '<ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">' + criteria.map(g => {
+      if (!g) return '';
+      if (typeof g === 'string') return `<li style="padding:12px 16px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; font-size:16px; font-weight:500;">${escapeHtml(g)}</li>`;
       const name = escapeHtml(g.name || '(Không tên)');
-      const pts = (typeof g.points === 'number') ? ` <span class="small muted">(${g.points} điểm)</span>` : '';
-      const note = g.note ? ` — ${escapeHtml(g.note)}` : '';
-      return `<li><strong>${name}</strong>${pts}${note}</li>`;
+      const pts = (typeof g.points === 'number') ? `<span style="font-size:16px; color:#4f46e5; font-weight:800; background:#e0e7ff; padding:4px 12px; border-radius:8px; white-space:nowrap; box-shadow:0 1px 2px rgba(79,70,229,0.1);">${g.points}%</span>` : '';
+      const note = g.note ? `<div style="font-size:15px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px dashed var(--border);">${escapeHtml(g.note)}</div>` : '';
+      return `<li style="padding:14px 18px; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; display:flex; flex-direction:column; transition:transform 0.2s, box-shadow 0.2s; box-shadow:0 2px 4px rgba(0,0,0,0.02);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 2px 4px rgba(0,0,0,0.02)'"><div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;"><strong style="font-size:17px; font-weight:600; color:var(--text-heading); line-height:1.5;">${name}</strong>${pts}</div>${note}</li>`;
     }).join('') + '</ul>';
+
+    const sumHtml = `
+      <div style="margin-top:16px; padding-top:16px; border-top:2px dashed var(--border); display:flex; justify-content:flex-end; align-items:center; gap:12px;">
+        <span style="font-size:16px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Tổng trọng số:</span>
+        <span style="font-size:19px; font-weight:800; padding:4px 12px; border-radius:8px; ${totalPts === 100 ? 'background:#dcfce7; color:#166534;' : 'background:#fee2e2; color:#991b1b;'}">${totalPts}%</span>
+      </div>`;
+    return listHtml + sumHtml;
   }
   const d = document.getElementById('exercise-detail');
   // determine grading criteria to show: prefer exercise -> parent form -> snapshot cache
@@ -384,21 +424,71 @@ async function showExercise(ex, parentForm) {
   const safeHtml = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(rawHtml) : rawHtml;
   const attached = (ex.attached_files||[]).map(f=>f.originalname || f.filename).join(', ') || '(Không có)';
   // difficulty badge class
+  const LEVEL_NAMES = {1:'Nhập môn',2:'Cơ bản',3:'Trung bình',4:'Nâng cao',5:'Chuyên sâu'};
+  const levelNum = ex.level || '';
+  const levelLabel = levelNum ? `Lv.${levelNum} \u2013 ${LEVEL_NAMES[levelNum]||''}` : '';
   const diffLabel = normalizeDifficultyLabel(ex.difficulty) || ex.difficulty || '';
-  const badgeClass = (diffLabel === 'Khó') ? 'badge hard' : (diffLabel === 'Trung bình' ? 'badge medium' : 'badge easy');
+  const fmtIcons = { 'zip':'📦', 'pdf':'📄', 'docx':'📝', 'link':'🔗', 'text':'📃', 'image':'🖼️' };
+  const fmtDisplay = ex.submission_format ? ex.submission_format.split(', ').map(f => (fmtIcons[f.toLowerCase()]||'📋') + ' ' + f.toUpperCase()).join('  ') : '(Chưa đặt)';
+  
+  const infoCards = [
+    { bg:'linear-gradient(135deg,#e0f2fe,#bae6fd)', icon:'🏷️', label:'MÃ BÀI TẬP', value: ex.id||'---', color:'#0369a1' },
+    { bg:'linear-gradient(135deg,#ede9fe,#ddd6fe)', icon:'🔢', label:'ID HỆ THỐNG', value: '#'+(ex.numeric_id||ex.pk||''), color:'#7c3aed' },
+    { bg:'linear-gradient(135deg,#fff7ed,#fed7aa)', icon:'📂', label:'DẠNG BÀI', value: (parentForm&&parentForm.name)||'', color:'#c2410c' },
+    { bg:'linear-gradient(135deg,#f1f5f9,#e2e8f0)', icon:'📊', label:'ĐỘ KHÓ & CẤP ĐỘ', value: diffLabel+(levelLabel?` • ${levelLabel}`:''), color:'#334155' },
+    { bg:'linear-gradient(135deg,#ecfdf5,#d1fae5)', icon:'📋', label:'HÌNH THỨC NỘP', value: fmtDisplay, color:'#065f46' },
+    { bg:'linear-gradient(135deg,#fdf4ff,#f5d0fe)', icon:'👨‍🏫', label:'GIẢNG VIÊN', value: ex.lecturer_name||ex.owner||'Hệ thống', color:'#86198f' }
+  ];
+  const cardsHtml = infoCards.map(c=>`
+    <div style="background:${c.bg};border-radius:12px;padding:14px 16px;min-height:70px;border:1px solid rgba(0,0,0,.05);box-shadow:0 2px 4px rgba(0,0,0,.02)">
+      <div style="font-size:11px;font-weight:800;color:${c.color};letter-spacing:.06em;margin-bottom:6px;text-transform:uppercase;opacity:.85">${c.icon} ${c.label}</div>
+      <div style="font-size:16px;font-weight:700;color:${c.color};line-height:1.4">${escapeHtml(String(c.value))}</div>
+    </div>`).join('');
+
   d.innerHTML = `
-    <button class="close-ex" id="exercise-close-btn">×</button>
-    <h2>${ex.title}</h2>
-    <div class="meta-row">
-      <div class="meta-item"><strong>ID:</strong> ${escapeHtml(ex.id || '')}</div>
-      <div class="meta-item"><strong>Dạng:</strong> ${escapeHtml((parentForm && parentForm.name) ? parentForm.name + ' (' + parentForm.form_id + ')' : '')}</div>
-      <div class="meta-item"><strong>Độ khó:</strong> <span class="badge ${diffLabel === 'Khó' ? 'hard' : (diffLabel === 'Trung bình' ? 'medium' : 'easy')}">${escapeHtml(diffLabel || ex.difficulty || '')}</span></div>
-      <div class="meta-item"><strong>Định dạng nộp:</strong> ${escapeHtml(ex.submission_format || '(Không có)')}</div>
+    <div class="detail-header" style="background:var(--bg-main); border-bottom:1px solid var(--border); padding:24px 32px 16px;">
+      <button class="close-ex" id="exercise-close-btn" title="Đóng" style="color:var(--text-muted); background:var(--bg-card); border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.05); z-index:2;">×</button>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <span style="background:#4f46e5; color:#fff; font-size:12px; font-weight:700; text-transform:uppercase; padding:4px 10px; border-radius:20px; letter-spacing:0.5px;">${escapeHtml(ex.id || '#')}</span>
+      </div>
+      <h2 style="font-size:25px; color:var(--text-heading); line-height:1.3; margin-bottom:6px;">${escapeHtml(ex.title)}</h2>
+      <div class="detail-sub" style="font-size:16px; color:var(--text-muted); font-weight:500;">Ngân hàng Bài tập • Dạng bài: <strong>${escapeHtml((parentForm && parentForm.name) ? parentForm.name : 'Chung')}</strong></div>
     </div>
-    <div class="section"><h3>Mô tả</h3><div>${safeHtml}</div></div>
-    <div class="section"><h3>Yêu cầu (${(ex.requirements||[]).length})</h3><ol>${(ex.requirements||[]).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ol></div>
-    <div class="section"><h3>Tiêu chí chấm (${(finalCriteria||[]).length})</h3>${renderGradingHtml(finalCriteria)}</div>
-    <div class="section"><h3>File đính kèm</h3><div>${escapeHtml(attached)}</div></div>
+    
+    <div class="detail-meta-grid" style="padding:24px 32px 16px;">
+      ${cardsHtml}
+    </div>
+    
+    <div class="section" style="border-top:none; padding:12px 32px 24px;">
+      <h3 style="color:#6366f1; border-bottom:2px solid var(--border); padding-bottom:10px; margin-bottom:16px; font-size:18px; letter-spacing:0.3px;">📖 Mô tả bài tập</h3>
+      <div class="desc-content" style="background:var(--bg-main); border:1px solid var(--border); border-left:4px solid #6366f1; box-shadow:0 2px 6px rgba(0,0,0,0.02);">${safeHtml}</div>
+    </div>
+    
+    <div class="section" style="padding:24px 32px;">
+      <h3 style="color:#10b981; border-bottom:2px solid var(--border); padding-bottom:10px; margin-bottom:16px; font-size:18px; letter-spacing:0.3px;">🎯 Yêu cầu kỹ thuật (${(ex.requirements||[]).length})</h3>
+      <div style="background:var(--bg-main); padding:20px 24px; border-radius:14px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <ol style="margin:0; padding-left:20px; font-weight:500; color:var(--text-heading);">
+          ${(ex.requirements||[]).map(r => `<li style="margin-bottom:12px; line-height:1.6;">${escapeHtml(r)}</li>`).join('')}
+        </ol>
+      </div>
+    </div>
+    
+    <div class="section" style="padding:24px 32px;">
+      <h3 style="color:#f59e0b; border-bottom:2px solid var(--border); padding-bottom:10px; margin-bottom:16px; font-size:18px; letter-spacing:0.3px;">⚖️ Tiêu chí chấm điểm (${(finalCriteria||[]).length})</h3>
+      <div style="background:var(--bg-main); padding:20px; border-radius:14px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        ${renderGradingHtml(finalCriteria)}
+      </div>
+    </div>
+    
+    ${(ex.attached_files && ex.attached_files.length) ? `
+    <div class="section" style="padding:24px 32px 32px;">
+      <h3 style="color:var(--text-muted); border-bottom:2px solid var(--border); padding-bottom:10px; margin-bottom:16px; font-size:18px; letter-spacing:0.3px;">📎 File đính kèm</h3>
+      <div style="display:inline-flex; align-items:center; gap:8px; background:var(--bg-main); padding:10px 16px; border-radius:10px; border:1px dashed #cbd5e1; font-size:15px; font-weight:600; color:var(--text-heading); transition:background 0.2s;" onmouseover="this.style.background='var(--bg-card)'" onmouseout="this.style.background='var(--bg-main)'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+        ${escapeHtml(attached)}
+      </div>
+    </div>
+    ` : ''}
   `;
   // ensure overlay exists at document level (not inside modal) and show it
   let overlay = document.getElementById('exercise-overlay');
@@ -575,6 +665,17 @@ function populateLecturerSelects() {
     if (!selForm) return;
     selForm.innerHTML = '';
     sub.forms.forEach(f => { const o = document.createElement('option'); o.value = f.form_id; o.textContent = `${f.name} (${f.difficulty})`; selForm.appendChild(o); });
+    if (selForm.onchange) selForm.onchange();
+  };
+  selForm.onchange = () => {
+    const sub = state.subjects.find(x => x.subject_id === selSub.value);
+    if (!sub) return;
+    const form = sub.forms.find(f => f.form_id === selForm.value);
+    const isNew = !document.getElementById('original_id').value;
+    if (form && isNew) {
+      currentGrades = JSON.parse(JSON.stringify(form.default_criteria || []));
+      renderGradingList();
+    }
   };
   if (state.subjects.length) selSub.onchange();
 }
@@ -642,8 +743,8 @@ function renderGradingList() {
     row.style.display = 'flex'; row.style.gap = '8px'; row.style.marginBottom = '6px';
     const name = document.createElement('input'); name.type='text'; name.placeholder='Tiêu chí'; name.value = g.name || ''; name.style.flex='1';
     name.oninput = (e) => { currentGrades[idx].name = e.target.value; };
-    const pts = document.createElement('input'); pts.type='number'; pts.min='0'; pts.placeholder='điểm'; pts.value = (g.points!=null?g.points:''); pts.style.width='86px';
-    pts.oninput = (e) => { currentGrades[idx].points = parseInt(e.target.value || 0, 10); };
+    const pts = document.createElement('input'); pts.type='number'; pts.min='0'; pts.placeholder='%'; pts.value = (g.points!=null?g.points:''); pts.style.width='86px';
+    pts.oninput = (e) => { currentGrades[idx].points = parseInt(e.target.value || 0, 10); updateGradingSum(); };
     const note = document.createElement('input'); note.type='text'; note.placeholder='Ghi chú (tùy chọn)'; note.value = g.note || ''; note.style.width='180px';
     note.oninput = (e) => { currentGrades[idx].note = e.target.value; };
     const del = document.createElement('button'); del.type='button'; del.textContent='-'; del.title='Xóa tiêu chí';
@@ -651,6 +752,26 @@ function renderGradingList() {
     row.appendChild(name); row.appendChild(pts); row.appendChild(note); row.appendChild(del);
     container.appendChild(row);
   });
+
+  let sumRow = document.createElement('div');
+  sumRow.style.marginTop = '8px'; sumRow.style.textAlign = 'right'; sumRow.style.fontSize = '13px';
+  let sumEl = document.createElement('span'); sumEl.id = 'grading-sum-text';
+  sumRow.appendChild(sumEl);
+  container.appendChild(sumRow);
+  updateGradingSum();
+}
+
+function updateGradingSum() {
+  const sumEl = document.getElementById('grading-sum-text');
+  if (!sumEl) return;
+  let sumPts = 0;
+  currentGrades.forEach(g => sumPts += (g.points || 0));
+  sumEl.textContent = `(Tổng thang điểm: ${sumPts}%)`;
+  if (sumPts !== 100) {
+    sumEl.style.color = '#ef4444'; sumEl.style.fontWeight = '700';
+  } else {
+    sumEl.style.color = '#10b981'; sumEl.style.fontWeight = '600';
+  }
 }
 
 // wire add buttons if present
@@ -704,6 +825,27 @@ if (exerciseForm) exerciseForm.onsubmit = async (e) => {
   multipart.append('form_id', fd.get('form_id'));
 
   try {
+    // QUICK CHECK
+    const checkRes = await fetch('/api/duplicate/quick-check', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: exercise.title,
+        description: exercise.description,
+        requirements: exercise.requirements.join('\n')
+      }), credentials: 'include'
+    });
+    if (checkRes.ok) {
+      const checkData = await checkRes.json();
+      if (checkData.warning) {
+        const msg = `Cảnh báo: Bài tập này rất giống (${checkData.score}%) với bài "${checkData.matchedTitle}".\n` + 
+                    (checkData.summary ? `\nMục tiêu chung: ${checkData.summary}\n\n` : '\n') +
+                    `Bạn có chắc chắn muốn lưu không?`;
+        if (!confirm(msg)) {
+          return; // Cancel save
+        }
+      }
+    }
+
     let res;
     if (orig) {
       res = await fetch(`/api/exercise/${encodeURIComponent(orig)}`, { method: 'PUT', credentials: 'include', body: multipart });
@@ -775,7 +917,7 @@ function renderManageList() {
         totalPoints = ex.grading_criteria.reduce((s, g) => s + (g && typeof g.points === 'number' ? g.points : 0), 0);
       }
     } catch (e) { totalPoints = 0; }
-    tdTotal.textContent = (typeof totalPoints === 'number' && totalPoints > 0) ? `${totalPoints} điểm` : (totalPoints === 0 ? `0 điểm` : '-');
+    tdTotal.innerHTML = (typeof totalPoints === 'number' && totalPoints > 0) ? `<span style="background:#e0e7ff;color:#4f46e5;padding:4px 8px;border-radius:6px;font-weight:700;font-size:14px">${totalPoints}%</span>` : (totalPoints === 0 ? `<span style="background:#f1f5f9;color:var(--text-muted);padding:4px 8px;border-radius:6px;font-weight:600;font-size:14px">0%</span>` : '-');
     const tdActions = document.createElement('td'); tdActions.style.display = 'flex'; tdActions.style.gap = '8px'; tdActions.style.justifyContent = 'flex-end';
 
     // determine if current user may edit/delete: allow if no owner set or owner === current lecturer
@@ -831,3 +973,109 @@ function renderManageList() {
 
 // init
 loadSubjects().catch(err=>console.error(err));
+
+// ==========================================
+// LECTURER IMPORT & EXPORT LOG
+// ==========================================
+let lecImportPreviewData = [];
+
+async function handleLecturerImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  showToast('Đang đọc file Excel...', 'success');
+  try {
+    const res = await fetch('/api/import/preview', { method: 'POST', body: formData, credentials: 'include' });
+    const data = await res.json();
+    if (data.success) {
+      lecImportPreviewData = data.preview;
+      renderLecturerImportPreview();
+      document.getElementById('lec-import-preview-modal').style.display = 'flex';
+    } else {
+      showToast('Lỗi: ' + data.error, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi server: ' + err.message, 'error');
+  }
+  e.target.value = '';
+}
+
+function renderLecturerImportPreview() {
+  const tbody = document.getElementById('lec-import-preview-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = lecImportPreviewData.map((r, idx) => `
+    <tr style="border-bottom:1px solid var(--border-color);">
+      <td style="padding:10px;">${idx + 1}</td>
+      <td style="padding:10px; font-weight:600; color:var(--text-main);">${r.MaBaiTap || '<span style="color:#10b981">Tự động (Thêm mới)</span>'}</td>
+      <td style="padding:10px; color:var(--text-main);">${r.TenBaiTap}</td>
+      <td style="padding:10px; font-weight:bold; color:${r.action==='INSERT'?'#10b981':'#f59e0b'};">${r.action}</td>
+      <td style="padding:10px; font-weight:bold; color:${r.status==='VALID'?'#10b981':'#ef4444'};">${r.status}</td>
+    </tr>
+  `).join('');
+}
+
+function closeLecturerImportPreview() {
+  document.getElementById('lec-import-preview-modal').style.display = 'none';
+  lecImportPreviewData = [];
+}
+
+async function confirmLecturerImport() {
+  if (lecImportPreviewData.length === 0) return;
+  const btn = document.getElementById('lec-import-confirm-btn');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/import/confirm', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: lecImportPreviewData }), credentials: 'include'
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast(`Thành công! Đã thêm ${result.inserted} bài, cập nhật ${result.updated} bài.`, 'success');
+      closeLecturerImportPreview();
+      loadLecturerExportLog();
+      // Reload exercise lists if open
+      if (document.getElementById('section-exercises')) window.location.reload();
+    } else {
+      showToast('Lỗi: ' + result.error, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi server: ' + err.message, 'error');
+  } finally {
+    btn.innerHTML = origText; btn.disabled = false;
+  }
+}
+
+async function loadLecturerExportLog() {
+  const tbody = document.getElementById('lecturer-export-log-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">⏳ Đang tải...</td></tr>';
+  try {
+    const res  = await fetch('/api/admin/export/log', { credentials: 'include' });
+    const logs = await res.json();
+    if (!logs.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted); font-style:italic;">Chưa có lịch sử xuất</td></tr>';
+      return;
+    }
+    const typeLabel = { exercises:'📋 Bài Tập', import_exercises:'📥 Nhập Bài Tập' };
+    const fmtColor  = { xlsx:'#16a34a', csv:'#0891b2' };
+    tbody.innerHTML = logs.map(l => {
+      const dt = new Date(l.exported_at).toLocaleString('vi-VN');
+      return `<tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:11px 16px; font-weight:600; color:var(--text-main);">${l.exported_by || '—'}</td>
+        <td style="padding:11px 16px; text-align:center;">
+          <span style="background:${(fmtColor[l.format]||'#64748b')}22; color:${fmtColor[l.format]||'#64748b'}; padding:2px 9px; border-radius:20px; font-size:14px; font-weight:700; text-transform:uppercase;">${l.format}</span>
+        </td>
+        <td style="padding:11px 16px; text-align:center; font-weight:700; color:#6366f1;">${l.row_count || 0}</td>
+        <td style="padding:11px 16px; font-size:15px; color:var(--text-muted);">${dt}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="4" style="color:#ef4444; text-align:center;">❌ ${e.message}</td></tr>`; }
+}
+
+// Automatically load the log when the page loads
+if (document.getElementById('lecturer-export-log-tbody')) {
+  setTimeout(loadLecturerExportLog, 1000);
+}

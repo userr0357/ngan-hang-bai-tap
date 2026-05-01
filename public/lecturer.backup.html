@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trang Quản lý (Giảng viên)</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Main layout with sidebar */
+    #app-lecturer { display: flex; min-height: 100vh; }
+    .sidebar-lecturer { width: 260px; position: fixed; left: 0; top: 0; bottom: 0; background: var(--card); padding: 20px; border-right: 1px solid #e6e9ee; overflow-y: auto; }
+    .brand-lecturer { font-weight: 700; color: var(--primary); margin-bottom: 24px; font-size: 16px; }
+    .menu-lecturer { list-style: none; padding: 0; margin: 0; }
+    .menu-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-weight: 500; color: #5a6c7d; transition: all 0.2s ease; }
+    .menu-item:hover { background: #f3f6ff; }
+    .menu-item.active { background: var(--primary); color: white; }
+    .menu-logout { padding: 10px 12px; border: none; background: none; cursor: pointer; border-radius: 6px; width: 100%; text-align: left; font-weight: 500; color: #5a6c7d; transition: all 0.2s ease; margin-top: 24px; }
+    .menu-logout:hover { background: #f3f6ff; }
+
+    .main-lecturer { margin-left: 280px; padding: 24px; flex: 1; }
+    .header-lecturer { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .header-lecturer h1 { margin: 0; font-size: 32px; color: #1a202c; }
+    .header-controls { display: flex; gap: 8px; align-items: center; }
+
+    /* Sections */
+    .section-lecturer { display: none; }
+    .section-lecturer.active { display: block; }
+
+    /* Modal styling */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal-content { background: white; max-width: 600px; max-height: 90vh; overflow-y: auto; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-header h2 { margin: 0; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+    .modal-close:hover { color: #c00; }
+
+    /* Exercise list styling */
+    .subject-group { margin-bottom: 24px; }
+    .subject-header { display: flex; align-items: center; gap: 8px; padding: 12px; background: #f5f5f5; border-radius: 4px; cursor: pointer; user-select: none; }
+    .subject-header:hover { background: #e8e8e8; }
+    .subject-toggle { font-size: 18px; width: 20px; text-align: center; }
+    .subject-toggle.collapsed::before { content: '▶'; }
+    .subject-toggle::before { content: '▼'; }
+    .subject-title { flex: 1; font-weight: bold; }
+    .subject-count { color: #666; font-size: 13px; }
+    .subject-exercises { margin-top: 8px; }
+
+    /* Exercise item */
+    .exercise-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 6px; background: #fafafa; }
+    .exercise-item:hover { background: #f0f0f0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .exercise-left { flex: 1; }
+    .exercise-title { font-weight: 500; cursor: pointer; color: #2563eb; }
+    .exercise-title:hover { text-decoration: underline; }
+    .exercise-badge { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-weight: 600; }
+    .badge-easy { background: #d4edda; color: #155724; }
+    .badge-medium { background: #fff3cd; color: #856404; }
+    .badge-hard { background: #f8d7da; color: #721c24; }
+    .exercise-controls { display: flex; gap: 8px; }
+    .btn-edit { background: #2563eb; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-edit:hover { background: #1d4ed8; }
+    .btn-delete { background: #dc2626; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-delete:hover { background: #b91c1c; }
+
+    /* Search and filter */
+    .search-section { margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .search-section input { flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .search-section select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+
+    /* Lecturer table */
+    .table-lecturer { width: 100%; border-collapse: collapse; background: white; }
+    .table-lecturer thead tr { background: #f5f5f5; border-bottom: 1px solid #ddd; }
+    .table-lecturer th, .table-lecturer td { padding: 10px; text-align: left; }
+
+    /* Toast */
+    .toast { display: none; position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 12px 16px; border-radius: 4px; z-index: 2000; }
+    .toast.show { display: block; animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Overlay for exercise detail panel */
+    #exercise-overlay { display: none; }
+    #exercise-overlay.show { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1098; }
+    #exercise-detail { position: fixed; right: 0; top: 0; height: 100%; width: 420px; max-width: 90%; background: #fff; z-index: 1099; box-shadow: -6px 0 18px rgba(0,0,0,0.12); overflow: auto; transform: translateX(100%); transition: transform 220ms ease; }
+    #exercise-detail.open { transform: translateX(0); }
+    #exercise-detail.hidden { display: none; }
+
+    /* Responsive */
+    @media (max-width: 800px) {
+      .sidebar-lecturer { position: relative; width: 100%; height: auto; padding: 16px; }
+      .main-lecturer { margin-left: 0; padding: 16px; }
+    }
+
+    /* Lecturer info text */
+    .lecturer-info-text { color: #666; font-size: 13px; margin: 8px 0 16px; }
+
+    /* Buttons */
+    .accent { background: var(--primary); color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .accent:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div id="app-lecturer">
+    <!-- Sidebar -->
+    <aside class="sidebar-lecturer">
+      <div class="brand-lecturer">Quản Lý Giảng Viên</div>
+      <ul class="menu-lecturer">
+        <li class="menu-item active" data-section="exercises">📝 Quản Lí Bài Tập</li>
+        <li class="menu-item" data-section="users" style="display:none">👥 Quản Lí Người Dùng</li>
+        <li class="menu-item" data-section="history" style="display:none">📋 Lịch Sử</li>
+      </ul>
+      <button class="menu-logout" id="btn-logout-sidebar">🚪 Đăng Xuất</button>
+    </aside>
+
+    <!-- Main content area -->
+    <main class="main-lecturer">
+      <!-- Header with title and button-controls -->
+      <div class="header-lecturer">
+        <h1 id="page-title">Quản lý bài tập</h1>
+        <div class="header-controls">
+          <button id="btn-export" class="accent" style="display:none">Xuất Excel</button>
+        </div>
+      </div>
+
+      <div class="lecturer-info-text" id="lecturer-info"></div>
+
+      <!-- Exercise Management Section -->
+      <div id="section-exercises" class="section-lecturer active">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0">Danh sách bài tập</h3>
+          <button id="btn-create-new" class="accent">+ Tạo bài tập mới</button>
+        </div>
+
+        <div class="search-section">
+          <input type="text" id="search-box" placeholder="Tìm kiếm bài tập...">
+          <select id="filter-difficulty">
+            <option value="">Tất cả độ khó</option>
+            <option value="Dễ">Dễ</option>
+            <option value="Trung bình">Trung bình</option>
+            <option value="Khó">Khó</option>
+          </select>
+        </div>
+
+        <div id="manage-list"></div>
+      </div>
+
+      <!-- User Management Section (Admin only) -->
+      <div id="section-users" class="section-lecturer" style="display:none">
+        <h3 style="margin-bottom:16px">👥 Quản Lí Người Dùng</h3>
+        <div style="margin-bottom:16px;">
+          <button class="accent" onclick="openAddLecturerModal()">+ Thêm Giảng Viên</button>
+          <button class="accent" onclick="openPermissionsModal()" style="margin-left:8px;">⚙️ Cài Đặt Quyền</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table-lecturer">
+            <thead>
+              <tr>
+                <th>Mã GV</th>
+                <th>Tên</th>
+                <th>Môn Học</th>
+                <th>Số Bài</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody id="lecturers-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- History Section (Admin only) -->
+      <div id="section-history" class="section-lecturer" style="display:none">
+        <h3 style="margin-bottom:16px">📋 Lịch Sử Hệ Thống</h3>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <select id="history-type" style="padding:8px;border:1px solid #ddd;border-radius:4px;">
+            <option value="login">Lịch Sử Đăng Nhập</option>
+            <option value="audit">Lịch Sử Bài Tập</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table-lecturer">
+            <thead>
+              <tr id="history-head"></tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Exercise detail panel (right-side) -->
+  <div id="exercise-overlay"></div>
+  <div id="exercise-detail" class="hidden"></div>
+
+  <!-- Modal: Add/Edit Exercise -->
+  <div id="exercise-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Thêm / Sửa bài tập</h2>
+        <button type="button" class="modal-close" id="modal-close">×</button>
+      </div>
+      <form id="exercise-form">
+        <input type="hidden" id="original_id" name="original_id" />
+        <label>Môn</label>
+        <select id="form-subject" name="subject_id" required></select>
+        <label>Dạng</label>
+        <select id="form-form" name="form_id" required></select>
+        <label>Tên bài</label>
+        <input name="title" id="field-title" />
+        <label>Id (unique)</label>
+        <input name="id" id="field-id" />
+        <label>Độ khó</label>
+        <select name="difficulty" id="field-difficulty"><option>Dễ</option><option>Trung bình</option><option>Khó</option></select>
+        <label>Mô tả Markdown</label>
+        <textarea name="description" id="field-description" rows="4"></textarea>
+        <label>Yêu cầu</label>
+        <div id="requirements-list"></div>
+        <div style="margin:6px 0"><button type="button" id="req-add">+ Thêm yêu cầu</button></div>
+
+        <label>Tiêu chí chấm</label>
+        <div id="grading-list"></div>
+        <div style="margin:6px 0"><button type="button" id="grade-add">+ Thêm tiêu chí</button></div>
+        <label>Định dạng nộp</label>
+        <input name="submission_format" id="field-submission" />
+        <label>File kèm</label>
+        <input id="field-files" type="file" name="files" multiple />
+        <div style="margin-top:10px">
+          <button type="submit" class="accent">Lưu</button>
+          <button type="button" id="exercise-cancel">Huỷ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add/Edit Lecturer -->
+  <div id="lecturer-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="lecturer-modal-title">Thêm Giảng Viên</h2>
+        <button type="button" class="modal-close" onclick="closeLecturerModal()">×</button>
+      </div>
+      <form id="lecturer-form" onsubmit="saveLecturer(event)">
+        <label>Mã Giảng Viên *</label>
+        <input type="text" id="lecturer-id" required style="width:100%;padding:8px;margin:4px 0 12px;border:1px solid #ddd;border-radius:4px" />
+        <label>Tên Giảng Viên *</label>
+        <input type="text" id="lecturer-name" required style="width:100%;padding:8px;margin:4px 0 12px;border:1px solid #ddd;border-radius:4px" />
+        <label>Mật Khẩu *</label>
+        <input type="password" id="lecturer-password" style="width:100%;padding:8px;margin:4px 0 12px;border:1px solid #ddd;border-radius:4px" />
+        <label><input type="checkbox" id="lecturer-admin" /> Quyền Admin</label>
+        <div style="margin-top:16px">
+          <button type="submit" class="accent">Lưu</button>
+          <button type="button" onclick="closeLecturerModal()" style="padding:8px 12px;margin-left:8px;background:#e0e0e0;border:none;border-radius:4px;cursor:pointer">Huỷ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Permission Management -->
+  <div id="permissions-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Quản Lí Quyền Môn Học</h2>
+        <button type="button" class="modal-close" onclick="closePermissionsModal()">×</button>
+      </div>
+      <label>Chọn Giảng Viên *</label>
+      <select id="permissions-lecturer" onchange="loadLecturerPermissions()" style="width:100%;padding:8px;margin:4px 0 12px;border:1px solid #ddd;border-radius:4px">
+        <option value="">-- Chọn --</option>
+      </select>
+      <div id="permissions-list" style="margin:12px 0"></div>
+      <div>
+        <button type="button" onclick="savePermissions()" class="accent">Lưu</button>
+        <button type="button" onclick="closePermissionsModal()" style="padding:8px 12px;margin-left:8px;background:#e0e0e0;border:none;border-radius:4px;cursor:pointer">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
