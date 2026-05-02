@@ -39,7 +39,7 @@
   --sidebar-muted: #6b7280;
 
   /* Font */
-  --font: 'Inter', 'PT Sans', sans-serif;
+  --font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 /* ─── Dark Mode ─── */
