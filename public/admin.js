@@ -730,10 +730,11 @@ function filterLecturerExercises() {
 function renderDetailExercisesTable(query = '') {
   const tbody = document.getElementById('gv-detail-exercises-tbody');
   tbody.innerHTML = '';
+  const searchStr = query ? query.normalize('NFC').toLowerCase() : '';
   const filtered = currentDetailExercises.filter(ex =>
-    (ex.TenBaiTap||'').toLowerCase().includes(query) ||
-    (ex.MaBaiTap||'').toLowerCase().includes(query) ||
-    (ex.TenMon||'').toLowerCase().includes(query)
+    (ex.TenBaiTap||'').normalize('NFC').toLowerCase().includes(searchStr) ||
+    (ex.MaBaiTap||'').normalize('NFC').toLowerCase().includes(searchStr) ||
+    (ex.TenMon||'').normalize('NFC').toLowerCase().includes(searchStr)
   );
   const lvlColors = {1:'#10b981',2:'#06b6d4',3:'#f59e0b',4:'#f97316',5:'#8b5cf6'};
   const lvlNames = {1:'Lắp ghép cú pháp',2:'Luồng rẽ nhánh',3:'Vòng lặp & Mảng',4:'Hàm & Cấu trúc',5:'Tư duy giải thuật'};

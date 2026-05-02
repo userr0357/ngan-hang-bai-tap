@@ -200,7 +200,8 @@ function renderSubject() {
   const container = document.getElementById('forms-container');
   container.innerHTML = '';
   // 1. Filter all forms and their exercises first
-  const q = state.searchQuery && state.searchQuery.toLowerCase();
+  const q = state.searchQuery || '';
+  const searchStr = q.normalize('NFC').toLowerCase();
   const filteredForms = [];
   
   (s.forms || []).forEach(f => {
@@ -211,10 +212,10 @@ function renderSubject() {
         if (state.difficultyFilter === 'medium' && lab !== 'trung bình') return false;
         if (state.difficultyFilter === 'hard' && lab !== 'khó') return false;
       }
-      if (!q) return true;
-      const titleMatch = (ex.title || '').toLowerCase().includes(q);
-      const descMatch = (ex.description || '').toLowerCase().includes(q);
-      const kwMatch = (ex.ai_keywords || '').toLowerCase().includes(q);
+      if (!searchStr) return true;
+      const titleMatch = (ex.title || '').normalize('NFC').toLowerCase().includes(searchStr);
+      const descMatch = (ex.description || '').normalize('NFC').toLowerCase().includes(searchStr);
+      const kwMatch = (ex.ai_keywords || '').normalize('NFC').toLowerCase().includes(searchStr);
       return titleMatch || descMatch || kwMatch;
     });
     
@@ -931,10 +932,11 @@ function renderManageList() {
       if ((ex.difficulty || '').toLowerCase() !== diffSel.toLowerCase()) return false;
     }
     if (!q) return true;
-    const titleMatch = String(ex.title||'').toLowerCase().includes(q);
-    const idMatch = String(ex.id||'').toLowerCase().includes(q);
-    const descMatch = String(ex.description||'').toLowerCase().includes(q);
-    const kwMatch = String(ex.ai_keywords||'').toLowerCase().includes(q);
+    const searchStr = q.normalize('NFC').toLowerCase();
+    const titleMatch = String(ex.title||'').normalize('NFC').toLowerCase().includes(searchStr);
+    const idMatch = String(ex.id||'').normalize('NFC').toLowerCase().includes(searchStr);
+    const descMatch = String(ex.description||'').normalize('NFC').toLowerCase().includes(searchStr);
+    const kwMatch = String(ex.ai_keywords||'').normalize('NFC').toLowerCase().includes(searchStr);
     return titleMatch || idMatch || descMatch || kwMatch;
   });
 
