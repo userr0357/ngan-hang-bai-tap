@@ -24,14 +24,15 @@ module.exports = function(app, auth) {
 
       let where = '(b.IsDeleted = 0 OR b.IsDeleted IS NULL)';
       const r = pool.request();
-      if (search) { where += ' AND (b.TenBaiTap LIKE @q OR b.MaBaiTap LIKE @q)'; r.input('q', mssql.NVarChar, '%'+search+'%'); }
+      if (search) { 
+        where += ' AND (b.TenBaiTap LIKE @q OR b.MaBaiTap LIKE @q OR b.MoTa LIKE @q OR ef.AI_Keywords LIKE @q)'; 
+        r.input('q', mssql.NVarChar, '%'+search+'%'); 
+      }
       if (mamon) { where += ' AND b.MaMon = @mon'; r.input('mon', mssql.VarChar, mamon); }
       if (magv) { where += ' AND b.MaGiangVien = @gv'; r.input('gv', mssql.VarChar, magv); }
       if (level) { where += ' AND b.SkillLevel = @lv'; r.input('lv', mssql.Int, parseInt(level)); }
       if (days && parseInt(days) > 0) { where += ' AND b.UpdatedAt >= DATEADD(day, -@days, GETDATE())'; r.input('days', mssql.Int, parseInt(days)); }
 
-      // Count + stats
-      const countR = await pool.request().query(`SELECT COUNT(*) AS total FROM BAITAP b WHERE ${where.replace(/@\w+/g, (m) => { const map = { '@q': search?("'%"+search.replace(/'/g,"''") +"%'"):"''", '@mon': mamon?("'"+mamon+"'"):"''", '@gv': magv?("'"+magv+"'"):"''", '@lv': level||'0', '@days': days||'0' }; return map[m]||"''"; })}`);
       // Simpler: just get all then paginate in JS
       const allSql = `SELECT b.Id, b.MaBaiTap, b.TenBaiTap, b.MaDoKho, dk.TenDoKho,
         d.MaDangBai, d.TenDangBai, m.MaMon, m.TenMon,
@@ -41,6 +42,7 @@ module.exports = function(app, auth) {
         LEFT JOIN DANGBAI d ON d.MaDangBai = b.MaDangBai
         LEFT JOIN MONHOC m ON m.MaMon = b.MaMon
         LEFT JOIN GIANGVIEN gv ON gv.MaGiangVien = b.MaGiangVien
+        LEFT JOIN EXERCISE_FEATURES ef ON ef.BaiTapId = b.Id
         WHERE ${where} ORDER BY b.UpdatedAt DESC`;
       const result = await r.query(allSql);
       const all = result.recordset;

@@ -64,10 +64,11 @@ async function getAllSubjects(filterMaMon) {
       dk.TenDoKho, b.MoTa, b.YeuCau, b.TieuChiChamDiem,
       b.MaGiangVien, gv.TenGiangVien,
       b.SkillLevel, b.SkillSub, b.UpdatedAt,
-      b.FileDinhKem
+      b.FileDinhKem, ef.AI_Keywords
     FROM MONHOC m
     LEFT JOIN DANGBAI d ON d.MaMon = m.MaMon
     LEFT JOIN BAITAP b ON b.MaDangBai = d.MaDangBai AND (b.IsDeleted = 0 OR b.IsDeleted IS NULL)
+    LEFT JOIN EXERCISE_FEATURES ef ON ef.BaiTapId = b.Id
     LEFT JOIN DOKHO dk ON dk.MaDoKho = b.MaDoKho
     LEFT JOIN GIANGVIEN gv ON gv.MaGiangVien = b.MaGiangVien`;
   const req = pool.request();
@@ -115,6 +116,7 @@ async function getAllSubjects(filterMaMon) {
           difficulty: row.TenDoKho || '', description: row.MoTa || '',
           requirements: parseRequirements(row.YeuCau),
           grading_criteria: crit,
+          ai_keywords: row.AI_Keywords || '',
           owner: row.MaGiangVien || '', lecturer_name: row.TenGiangVien || row.MaGiangVien || '',
           level: row.SkillLevel || 1, skill_sub: row.SkillSub || 0,
           submission_format: formats.length ? formats.join(', ') : '',

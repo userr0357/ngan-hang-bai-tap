@@ -250,7 +250,10 @@ function renderSubject() {
         if (state.difficultyFilter === 'hard' && lab !== 'khó') return false;
       }
       if (!q) return true;
-      return (ex.title || '').toLowerCase().includes(q) || (ex.description || '').toLowerCase().includes(q);
+      const titleMatch = (ex.title || '').toLowerCase().includes(q);
+      const descMatch = (ex.description || '').toLowerCase().includes(q);
+      const kwMatch = (ex.ai_keywords || '').toLowerCase().includes(q);
+      return titleMatch || descMatch || kwMatch;
     });
     // sort by difficulty (easy -> medium -> hard), then by numeric order extracted from title (e.g. "Bài 10")
     // fall back to localeCompare when no numeric prefix is found
@@ -912,7 +915,11 @@ function renderManageList() {
       if ((ex.difficulty || '').toLowerCase() !== diffSel.toLowerCase()) return false;
     }
     if (!q) return true;
-    return (String(ex.title||'')+ ' ' + String(ex.id||'') + ' ' + (ex.description||'')).toLowerCase().includes(q);
+    const titleMatch = String(ex.title||'').toLowerCase().includes(q);
+    const idMatch = String(ex.id||'').toLowerCase().includes(q);
+    const descMatch = String(ex.description||'').toLowerCase().includes(q);
+    const kwMatch = String(ex.ai_keywords||'').toLowerCase().includes(q);
+    return titleMatch || idMatch || descMatch || kwMatch;
   });
 
   rows.forEach((r, idx) => {
