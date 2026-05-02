@@ -64,6 +64,24 @@ module.exports = function(app, auth) {
     } catch(e) { console.error('admin exercises:', e.message); res.status(500).json({ error: e.message }); }
   });
 
+  // ── Xóa bài tập (Quyền Admin) ──
+  app.delete('/api/admin/exercise/:id', auth, async (req, res) => {
+    try {
+      if (!req.user || !req.user.is_admin) return res.status(403).json({ error: 'Không có quyền truy cập' });
+      const pool = await db.getPool();
+      const check = await pool.request().input('id', mssql.VarChar, req.params.id)
+        .query('SELECT Id FROM BAITAP WHERE MaBaiTap=@id AND (IsDeleted = 0 OR IsDeleted IS NULL)');
+      if (!check.recordset.length) return res.status(404).json({ error: 'Không tìm thấy bài tập' });
+      
+      await pool.request().input('id', mssql.VarChar, req.params.id)
+        .query('UPDATE BAITAP SET IsDeleted = 1, UpdatedAt = GETUTCDATE() WHERE MaBaiTap=@id');
+      res.json({ success: true });
+    } catch(e) {
+      console.error('Admin delete exercise:', e.message);
+      res.status(500).json({ error: 'Lỗi server' });
+    }
+  });
+
   // ── Single exercise detail ──
   app.get('/api/admin/exercise/:id', auth, async (req, res) => {
     try {
