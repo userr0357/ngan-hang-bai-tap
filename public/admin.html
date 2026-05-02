@@ -82,13 +82,15 @@
 <body>
     <button class="theme-toggle-btn" style="position:fixed;top:16px;right:16px;z-index:9999;" data-theme-btn="" title="Chuyển sang tối" onclick="toggleDarkMode()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
   <div class="admin-wrapper">
-    <aside class="sidebar-lecturer admin-sidebar">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 4px">
-        <div class="brand-lecturer" style="display:flex; align-items:center; gap:10px; padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,0.08);">
-        <span style="font-size:25px;">🛡️</span>
-        <span style="font-size:18px; font-weight:700; color:var(--text-main);">Admin Panel</span>
-      </div>
-        <button id="sidebar-toggle" onclick="toggleSidebar()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border-color);background:var(--card-bg);color:var(--text-muted);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s" title="Thu gọn menu">◀</button>
+    <aside class="sidebar-lecturer admin-sidebar app-sidebar">
+      <div class="sidebar-header">
+        <div class="brand-wrapper">
+          <span class="brand-icon">🛡️</span>
+          <span class="brand-text">Admin Panel</span>
+        </div>
+        <button id="sidebar-toggle" onclick="toggleSidebar()" class="sidebar-toggle-btn" title="Thu/mở menu">
+          <svg class="toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
       </div>
 
       <nav style="flex:1; overflow-y:auto; padding:12px 0;">

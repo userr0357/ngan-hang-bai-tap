@@ -206,3 +206,99 @@ form input, form textarea, form select{width:100%;padding:8px;margin-top:4px;bor
 
 /* small screens */
 @media(max-width:800px){.sidebar{position:relative;width:100%;height:auto}.main{margin-left:0}}
+
+/* ── Modern Sidebar Toggle ── */
+.app-sidebar {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow-x: hidden;
+}
+.app-sidebar.collapsed {
+  width: 80px !important;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.06));
+  flex-wrap: nowrap;
+}
+
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.brand-icon {
+  font-size: 25px;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.sidebar-toggle-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg, #fff);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-left: 8px;
+}
+.sidebar-toggle-btn:hover {
+  background: var(--primary-light, #f0f4ff);
+  color: var(--primary, #6366f1);
+  border-color: var(--border-color);
+}
+
+.toggle-icon {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed state handling for Header */
+.app-sidebar.collapsed .sidebar-header {
+  flex-direction: column;
+  padding: 16px 8px;
+  gap: 16px;
+}
+.app-sidebar.collapsed .brand-wrapper {
+  justify-content: center;
+  width: 100%;
+}
+.app-sidebar.collapsed .brand-text {
+  display: none !important;
+}
+.app-sidebar.collapsed .sidebar-toggle-btn {
+  margin-left: 0;
+}
+.app-sidebar.collapsed .toggle-icon {
+  transform: rotate(180deg);
+}
+
+/* Base structural adjustments for smooth transition */
+.admin-main, .main-lecturer {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.app-sidebar.collapsed ~ .main,
+.app-sidebar.collapsed ~ .admin-main,
+.app-sidebar.collapsed ~ .main-lecturer,
+body:has(.app-sidebar.collapsed) .main,
+body:has(.app-sidebar.collapsed) .admin-main,
+body:has(.app-sidebar.collapsed) .main-lecturer {
+  margin-left: 80px !important;
+  width: calc(100% - 80px) !important;
+}

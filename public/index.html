@@ -83,8 +83,16 @@
 </head>
 <body>
   <div id="app">
-    <aside class="sidebar">
-      <div class="brand">📚 Ngân hàng Bài tập</div>
+    <aside class="sidebar app-sidebar">
+      <div class="sidebar-header">
+        <div class="brand-wrapper">
+          <span class="brand-icon">📚</span>
+          <span class="brand-text" style="color: #6366f1;">Ngân hàng Bài tập</span>
+        </div>
+        <button id="student-sidebar-toggle" onclick="toggleStudentSidebar()" class="sidebar-toggle-btn" title="Thu/mở menu">
+          <svg class="toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
       <ul id="subject-list"></ul>
     </aside>
     <main class="main">
@@ -115,5 +123,14 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
   <script src="/app.js"></script>
+  <script>
+    function toggleStudentSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      if (!sidebar) return;
+      sidebar.classList.toggle('collapsed');
+      try { localStorage.setItem('student-sidebar-collapsed', sidebar.classList.contains('collapsed')); } catch(e){}
+    }
+    try { if (localStorage.getItem('student-sidebar-collapsed') === 'true') { const s = document.querySelector('.sidebar'); if(s) s.classList.add('collapsed'); } } catch(e){}
+  </script>
 </body>
 </html>
