@@ -161,42 +161,6 @@ function renderSubject() {
   document.getElementById('subject-title').textContent = s.subject_name;
   const descEl = document.getElementById('subject-desc');
   if (descEl) descEl.textContent = s.description || '';
-  // subject summary: total and counts by difficulty
-  try {
-    const summaryEl = document.getElementById('subject-summary');
-    if (summaryEl) {
-      const allExercises = (s.forms || []).reduce((acc, f) => acc.concat(f.exercises || []), []);
-      const totals = { total: allExercises.length, easy: 0, medium: 0, hard: 0 };
-      allExercises.forEach(ex => {
-        const lab = normalizeDifficultyLabel(ex.difficulty) || '';
-        if (lab === 'Dễ') totals.easy++;
-        else if (lab === 'Trung bình') totals.medium++;
-        else if (lab === 'Khó') totals.hard++;
-      });
-      summaryEl.innerHTML = `
-        <div class="stat-card" style="background:linear-gradient(135deg, #3b82f6, #2563eb);">
-          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(15deg); user-select:none;">📚</div>
-          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Tổng bài tập</div>
-          <div class="stat-value">${totals.total}</div>
-        </div>
-        <div class="stat-card" style="background:linear-gradient(135deg, #10b981, #059669);">
-          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(-10deg); user-select:none;">🟢</div>
-          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Mức độ Dễ</div>
-          <div class="stat-value">${totals.easy}</div>
-        </div>
-        <div class="stat-card" style="background:linear-gradient(135deg, #f59e0b, #d97706);">
-          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(10deg); user-select:none;">🟡</div>
-          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Trung bình</div>
-          <div class="stat-value">${totals.medium}</div>
-        </div>
-        <div class="stat-card" style="background:linear-gradient(135deg, #ef4444, #dc2626);">
-          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(-15deg); user-select:none;">🔴</div>
-          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Mức độ Khó</div>
-          <div class="stat-value">${totals.hard}</div>
-        </div>
-      `;
-    }
-  } catch (e) { /* ignore summary errors */ }
   const container = document.getElementById('forms-container');
   container.innerHTML = '';
   // 1. Filter all forms and their exercises first
@@ -231,6 +195,43 @@ function renderSubject() {
     if (da !== db) return da - db;
     return (a.name||'').localeCompare(b.name||'');
   });
+
+  // Render subject summary based on FILTERED results
+  try {
+    const summaryEl = document.getElementById('subject-summary');
+    if (summaryEl) {
+      const allFilteredExercises = filteredForms.reduce((acc, f) => acc.concat(f.exercises || []), []);
+      const totals = { total: allFilteredExercises.length, easy: 0, medium: 0, hard: 0 };
+      allFilteredExercises.forEach(ex => {
+        const lab = normalizeDifficultyLabel(ex.difficulty) || '';
+        if (lab === 'Dễ') totals.easy++;
+        else if (lab === 'Trung bình') totals.medium++;
+        else if (lab === 'Khó') totals.hard++;
+      });
+      summaryEl.innerHTML = `
+        <div class="stat-card" style="background:linear-gradient(135deg, #3b82f6, #2563eb);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(15deg); user-select:none;">📚</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">${q || (state.difficultyFilter && state.difficultyFilter !== 'all') ? 'Kết quả tìm kiếm' : 'Tổng bài tập'}</div>
+          <div class="stat-value">${totals.total}</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg, #10b981, #059669);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(-10deg); user-select:none;">🟢</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Mức độ Dễ</div>
+          <div class="stat-value">${totals.easy}</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg, #f59e0b, #d97706);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(10deg); user-select:none;">🟡</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Trung bình</div>
+          <div class="stat-value">${totals.medium}</div>
+        </div>
+        <div class="stat-card" style="background:linear-gradient(135deg, #ef4444, #dc2626);">
+          <div style="position:absolute; right:-10px; top:-10px; font-size:60px; opacity:0.15; transform:rotate(-15deg); user-select:none;">🔴</div>
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:1px;">Mức độ Khó</div>
+          <div class="stat-value">${totals.hard}</div>
+        </div>
+      `;
+    }
+  } catch (e) { /* ignore summary errors */ }
 
   // 2. paginate the FILTERED forms
   const formsPerPage = state.formsPerPage || 2;
