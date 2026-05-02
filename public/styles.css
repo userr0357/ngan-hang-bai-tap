@@ -282,6 +282,36 @@ form input, form textarea, form select{width:100%;padding:8px;margin-top:4px;bor
 .app-sidebar.collapsed .brand-text {
   display: none !important;
 }
+
+/* Sidebar Menu Collapsed State */
+.app-sidebar.collapsed .menu-group,
+.app-sidebar.collapsed .menu-group-label,
+.app-sidebar.collapsed .menu-label {
+  display: none !important;
+}
+
+.app-sidebar.collapsed .menu-item {
+  font-size: 0 !important;
+  justify-content: center !important;
+  padding: 12px 0 !important;
+}
+
+.app-sidebar.collapsed .menu-item span:first-child {
+  font-size: 22px !important;
+  margin: 0 !important;
+}
+
+/* Student Page specifically */
+.app-sidebar.collapsed #subject-list li {
+  padding: 10px 0 !important;
+}
+.app-sidebar.collapsed #subject-list li > div {
+  justify-content: center !important;
+}
+.app-sidebar.collapsed .subject-text,
+.app-sidebar.collapsed .subject-badge-container {
+  display: none !important;
+}
 .app-sidebar.collapsed .sidebar-toggle-btn {
   margin-left: 0;
 }

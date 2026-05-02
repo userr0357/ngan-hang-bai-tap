@@ -80,12 +80,22 @@ function renderSidebar() {
   state.subjects.forEach(s => {
     const li = document.createElement('li');
     const isActive = state.currentSubject && state.currentSubject.subject_id === s.subject_id;
-    li.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
-      <span style="font-weight:600; line-height:1.4;">${escapeHtml(s.subject_name)}</span>
-      ${isActive ? `<span style="font-size:16px; margin-left:8px; opacity:0.9;">✓</span>` : `<span style="font-size:12px; background:var(--border); color:var(--text-muted); padding:2px 8px; border-radius:12px; font-weight:800;">${s.total_exercises}</span>`}
+    const firstLetter = (s.subject_name || 'S').charAt(0).toUpperCase();
+    li.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+      <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+        <div class="subject-icon" style="flex-shrink:0; width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:var(--bg-main, #f1f5f9); color:var(--text-main, #334155); border-radius:6px; font-size:13px; font-weight:800; border:1px solid var(--border-color, #e2e8f0); transition:all 0.2s;">${firstLetter}</div>
+        <span class="subject-text" style="font-weight:600; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.subject_name)}</span>
+      </div>
+      <div class="subject-badge-container" style="flex-shrink:0;">
+        ${isActive ? `<span style="font-size:16px; margin-left:8px; opacity:0.9;">✓</span>` : `<span style="font-size:12px; background:var(--border); color:var(--text-muted); padding:2px 8px; border-radius:12px; font-weight:800;">${s.total_exercises}</span>`}
+      </div>
     </div>`;
     li.onclick = async () => { await selectSubject(s.subject_id); renderSidebar(); };
-    if (isActive) li.classList.add('active');
+    if (isActive) {
+      li.classList.add('active');
+      const icon = li.querySelector('.subject-icon');
+      if (icon) { icon.style.background = '#6366f1'; icon.style.color = '#fff'; icon.style.borderColor = '#6366f1'; }
+    }
     ul.appendChild(li);
   });
 }
