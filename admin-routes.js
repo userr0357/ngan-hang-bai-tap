@@ -25,8 +25,12 @@ module.exports = function(app, auth) {
       let where = '(b.IsDeleted = 0 OR b.IsDeleted IS NULL)';
       const r = pool.request();
       if (search) { 
-        where += ' AND (b.TenBaiTap LIKE @q OR b.MaBaiTap LIKE @q OR b.MoTa LIKE @q OR ef.AI_Keywords LIKE @q)'; 
-        r.input('q', mssql.NVarChar, '%'+search+'%'); 
+        const qNFC = search.normalize('NFC');
+        const qNFD = search.normalize('NFD');
+        where += ` AND (b.TenBaiTap LIKE @qNFC OR b.MaBaiTap LIKE @qNFC OR b.MoTa LIKE @qNFC OR ef.AI_Keywords LIKE @qNFC 
+                     OR b.TenBaiTap LIKE @qNFD OR b.MoTa LIKE @qNFD OR ef.AI_Keywords LIKE @qNFD)`;
+        r.input('qNFC', mssql.NVarChar, '%'+qNFC+'%'); 
+        r.input('qNFD', mssql.NVarChar, '%'+qNFD+'%'); 
       }
       if (mamon) { where += ' AND b.MaMon = @mon'; r.input('mon', mssql.VarChar, mamon); }
       if (magv) { where += ' AND b.MaGiangVien = @gv'; r.input('gv', mssql.VarChar, magv); }
