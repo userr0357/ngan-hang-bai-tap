@@ -293,19 +293,19 @@
         <button id="lec-sidebar-toggle" onclick="toggleLecSidebar()" style="width:100%;height:28px;border-radius:6px;border:1px solid var(--border-color,#e2e8f0);background:var(--bg-color,#f8fafc);color:var(--text-muted,#64748b);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .2s" title="Thu gọn menu">◀ Thu gọn</button>
       </div>
       <nav class="menu-nav">
-        <div class="menu-group-label">quản lý</div>
+        <div class="menu-group-label">Quản lý</div>
         <ul class="menu-lecturer">
-          <li class="menu-item active" data-section="dashboard"><span class="mi-icon">📊</span> tổng quan</li>
-          <li class="menu-item" data-section="exercises"><span class="mi-icon">📝</span> ngân hàng bài tập</li>
-          <li class="menu-item" data-section="export"><span class="mi-icon">📤</span> xuất / nhập dữ liệu</li>
-          <li class="menu-item" data-section="feedback"><span class="mi-icon">💬</span> tiếp nhận góp ý</li>
-          <li class="menu-item" data-section="exercise-history"><span class="mi-icon">📋</span> lịch sử bài tập</li>
-          <li class="menu-item" data-section="duplicates"><span class="mi-icon">🔍</span> kiểm tra trùng lặp</li>
+          <li class="menu-item active" data-section="dashboard"><span class="mi-icon">📊</span> Tổng quan</li>
+          <li class="menu-item" data-section="exercises"><span class="mi-icon">📝</span> Ngân hàng bài tập</li>
+          <li class="menu-item" data-section="export"><span class="mi-icon">📤</span> Xuất / nhập dữ liệu</li>
+          <li class="menu-item" data-section="feedback"><span class="mi-icon">💬</span> Tiếp nhận góp ý</li>
+          <li class="menu-item" data-section="exercise-history"><span class="mi-icon">📋</span> Lịch sử bài tập</li>
+          <li class="menu-item" data-section="duplicates"><span class="mi-icon">🔍</span> Kiểm tra trùng lặp</li>
         </ul>
-        <div class="menu-group-label" style="margin-top:8px">quản trị</div>
+        <div class="menu-group-label" style="margin-top:8px">Quản trị</div>
         <ul class="menu-lecturer">
-          <li class="menu-item" data-section="users" style="display:none"><span class="mi-icon">👥</span> quản lý người dùng</li>
-          <li class="menu-item" data-section="history" style="display:none"><span class="mi-icon">🔑</span> lịch sử đăng nhập</li>
+          <li class="menu-item" data-section="users" style="display:none"><span class="mi-icon">👥</span> Quản lý người dùng</li>
+          <li class="menu-item" data-section="history" style="display:none"><span class="mi-icon">🔑</span> Lịch sử đăng nhập</li>
         </ul>
       </nav>
       <div class="sidebar-profile">
@@ -330,9 +330,9 @@
     <main class="main-lecturer">
       <!-- Header with title and button-controls -->
       <div class="header-lecturer">
-        <h1 id="page-title">quản lý bài tập</h1>
+        <h1 id="page-title">Quản lý bài tập</h1>
         <div class="header-controls">
-          <button id="btn-export" class="accent" style="display:none">xuất excel</button>
+          <button id="btn-export" class="accent" style="display:none">Xuất Excel</button>
         </div>
       </div>
 
@@ -343,7 +343,7 @@
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
           <span style="font-size:28px">📊</span>
           <div>
-            <h2 style="margin:0;font-size:23px;font-weight:800;color:var(--text-main,#1e293b)">tổng quan hoạt động</h2>
+            <h2 style="margin:0;font-size:23px;font-weight:800;color:var(--text-main,#1e293b)">Tổng quan hoạt động</h2>
             <p style="margin:2px 0 0;font-size:16px;color:var(--text-muted,#64748b)">Thống kê chi tiết về bài tập và môn học bạn đang quản lý</p>
           </div>
         </div>
@@ -351,22 +351,22 @@
         <!-- Stats Cards -->
         <div id="gv-dash-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
           <div onclick="switchLecturerSection('exercises')" style="cursor:pointer;background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:14px;padding:20px;color:#fff;box-shadow:0 4px 20px rgba(99,102,241,.25);transition:transform 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-            <div style="font-size:15px;font-weight:600;opacity:.85">tổng bài tập</div>
+            <div style="font-size:15px;font-weight:600;opacity:.85">Tổng bài tập</div>
             <div id="gv-stat-total" style="font-size:32px;font-weight:800;margin:4px 0">—</div>
             <div style="font-size:14px;opacity:.7">Bài tập đang quản lý</div>
           </div>
           <div onclick="switchLecturerSection('dashboard', 'gv-dash-subjects-container')" style="cursor:pointer;background:linear-gradient(135deg,#10b981,#34d399);border-radius:14px;padding:20px;color:#fff;box-shadow:0 4px 20px rgba(16,185,129,.25);transition:transform 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-            <div style="font-size:15px;font-weight:600;opacity:.85">môn học</div>
+            <div style="font-size:15px;font-weight:600;opacity:.85">Môn học</div>
             <div id="gv-stat-subjects" style="font-size:32px;font-weight:800;margin:4px 0">—</div>
             <div style="font-size:14px;opacity:.7">Môn đang phụ trách</div>
           </div>
           <div onclick="switchLecturerSection('dashboard', 'gv-dash-forms-container')" style="cursor:pointer;background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:14px;padding:20px;color:#fff;box-shadow:0 4px 20px rgba(245,158,11,.25);transition:transform 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-            <div style="font-size:15px;font-weight:600;opacity:.85">dạng bài</div>
+            <div style="font-size:15px;font-weight:600;opacity:.85">Dạng bài</div>
             <div id="gv-stat-forms" style="font-size:32px;font-weight:800;margin:4px 0">—</div>
             <div style="font-size:14px;opacity:.7">Loại dạng bài khác nhau</div>
           </div>
           <div onclick="switchLecturerSection('dashboard', 'gv-dash-levels-container')" style="cursor:pointer;background:linear-gradient(135deg,#ef4444,#f87171);border-radius:14px;padding:20px;color:#fff;box-shadow:0 4px 20px rgba(239,68,68,.25);transition:transform 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-            <div style="font-size:15px;font-weight:600;opacity:.85">cấp độ</div>
+            <div style="font-size:15px;font-weight:600;opacity:.85">Cấp độ</div>
             <div id="gv-stat-levels" style="font-size:32px;font-weight:800;margin:4px 0">—</div>
             <div style="font-size:14px;opacity:.7">Skill levels hiện có</div>
           </div>
@@ -377,14 +377,14 @@
           <div id="gv-dash-subjects-container" style="background:var(--card-bg,#fff);border-radius:14px;border:1px solid var(--border-color,#e2e8f0);overflow:hidden">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:8px">
               <span style="font-size:19px">📚</span>
-              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">môn học đang quản lý</h3>
+              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">Môn học đang quản lý</h3>
             </div>
             <div id="gv-dash-subjects" style="padding:12px 16px;max-height:300px;overflow-y:auto"></div>
           </div>
           <div style="background:var(--card-bg,#fff);border-radius:14px;border:1px solid var(--border-color,#e2e8f0);overflow:hidden">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:8px">
               <span style="font-size:19px">🎯</span>
-              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">phân bổ độ khó</h3>
+              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">Phân bổ độ khó</h3>
             </div>
             <div id="gv-dash-difficulty" style="padding:16px 20px"></div>
           </div>
@@ -395,14 +395,14 @@
           <div id="gv-dash-levels-container" style="background:var(--card-bg,#fff);border-radius:14px;border:1px solid var(--border-color,#e2e8f0);overflow:hidden">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:8px">
               <span style="font-size:19px">⚡</span>
-              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">phân bổ skill level</h3>
+              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">Phân bổ skill level</h3>
             </div>
             <div id="gv-dash-levels" style="padding:16px 20px"></div>
           </div>
           <div id="gv-dash-forms-container" style="background:var(--card-bg,#fff);border-radius:14px;border:1px solid var(--border-color,#e2e8f0);overflow:hidden">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:8px">
               <span style="font-size:19px">📋</span>
-              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">dạng bài tập</h3>
+              <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">Dạng bài tập</h3>
             </div>
             <div id="gv-dash-forms" style="padding:12px 16px;max-height:300px;overflow-y:auto"></div>
           </div>
@@ -412,7 +412,7 @@
         <div style="background:var(--card-bg,#fff);border-radius:14px;border:1px solid var(--border-color,#e2e8f0);overflow:hidden">
           <div style="padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:8px">
             <span style="font-size:19px">🕐</span>
-            <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">bài tập cập nhật gần đây</h3>
+            <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--text-main,#1e293b)">Bài tập cập nhật gần đây</h3>
           </div>
           <div style="padding:0">
             <table style="width:100%;border-collapse:collapse">
@@ -431,23 +431,23 @@
 
       <div id="section-exercises" class="section-lecturer">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-          <h2 style="margin:0;font-size:23px;font-weight:800;color:var(--text-main,#1e293b);display:flex;align-items:center;gap:10px"><span style="width:4px;height:24px;background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:3px;flex-shrink:0"></span>danh sách bài tập</h2>
+          <h2 style="margin:0;font-size:23px;font-weight:800;color:var(--text-main,#1e293b);display:flex;align-items:center;gap:10px"><span style="width:4px;height:24px;background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:3px;flex-shrink:0"></span>Danh sách bài tập</h2>
           <div style="display:flex;gap:8px">
-            <button id="btn-create-new" class="btn-primary">+ tạo bài tập mới</button>
+            <button id="btn-create-new" class="btn-primary">+ Tạo bài tập mới</button>
           </div>
         </div>
         <div class="filter-bar">
-          <input type="text" id="search-box" class="filter-search" placeholder="🔍 tìm kiếm tên bài tập, mã bài, mô tả...">
-          <select id="filter-subject" class="filter-select"><option value="">tất cả môn</option></select>
-          <select id="filter-form" class="filter-select"><option value="">tất cả dạng bài</option></select>
+          <input type="text" id="search-box" class="filter-search" placeholder="🔍 Tìm kiếm tên bài tập, mã bài, mô tả...">
+          <select id="filter-subject" class="filter-select"><option value="">Tất cả môn</option></select>
+          <select id="filter-form" class="filter-select"><option value="">Tất cả dạng bài</option></select>
           <select id="filter-difficulty" class="filter-select">
-            <option value="">độ khó</option>
-            <option value="Dễ">dễ</option>
-            <option value="Trung bình">trung bình</option>
-            <option value="Khó">khó</option>
+            <option value="">Độ khó</option>
+            <option value="Dễ">Dễ</option>
+            <option value="Trung bình">Trung bình</option>
+            <option value="Khó">Khó</option>
           </select>
           <select id="filter-level" class="filter-select">
-            <option value="">level</option>
+            <option value="">Level</option>
             <option value="1">level 1 – lắp ghép cú pháp</option>
             <option value="2">level 2 – hiểu & phân tích</option>
             <option value="3">level 3 – vận dụng</option>
