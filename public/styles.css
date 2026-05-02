@@ -302,11 +302,22 @@ form input, form textarea, form select{width:100%;padding:8px;margin-top:4px;bor
 }
 
 /* Student Page specifically */
+.app-sidebar.collapsed #subject-list {
+  padding: 16px 0 !important; /* Bỏ padding hai bên để có thể dùng margin auto căn giữa li */
+}
 .app-sidebar.collapsed #subject-list li {
-  padding: 10px 0 !important;
+  padding: 0 !important;
+  width: 48px !important;
+  height: 48px !important;
+  margin: 0 auto 8px auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 .app-sidebar.collapsed #subject-list li > div {
   justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 .app-sidebar.collapsed .subject-text,
 .app-sidebar.collapsed .subject-badge-container {
