@@ -167,7 +167,13 @@
     <main class="admin-main">
       <div class="admin-content">
         <div id="dashboard" class="admin-section active">
-          <h2 class="section-title">📊 Tổng quan hệ thống</h2>
+          <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px;">
+            <span style="font-size: 28px; line-height: 1;">📊</span>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <h2 class="section-title" style="margin:0; line-height: 1;">Tổng quan hệ thống</h2>
+              <p style="margin:0; font-size:15px; color:var(--text-muted);">Thống kê số liệu hoạt động tổng quan</p>
+            </div>
+          </div>
           <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
             <div onclick="navigateTo('section-lecturers')" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;padding:16px;color:white;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 14px rgba(37,99,235,0.25);" onmouseover="this.style.transform='translateY(-4px) scale(1.02)';this.style.boxShadow='0 10px 28px rgba(37,99,235,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(37,99,235,0.25)'" title="Xem danh sách giảng viên">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -323,9 +329,12 @@
         <div id="exercises" class="admin-section">
           <!-- Header -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <div>
-              <h2 class="section-title" style="margin:0;">📋 Danh sách bài tập</h2>
-              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Giám sát toàn bộ ngân hàng bài tập của hệ thống</p>
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+              <span style="font-size: 28px; line-height: 1;">📋</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2 class="section-title" style="margin:0; line-height: 1;">Danh sách bài tập</h2>
+                <p style="margin:0; font-size:15px; color:var(--text-muted);">Giám sát toàn bộ ngân hàng bài tập của hệ thống</p>
+              </div>
             </div>
           </div>
 
@@ -424,7 +433,13 @@
 
         <div id="users" class="admin-section">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 class="section-title" style="margin:0;">👥 Quản lý giảng viên</h2>
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+              <span style="font-size: 28px; line-height: 1;">👥</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2 class="section-title" style="margin:0; line-height: 1;">Quản lý giảng viên</h2>
+                <p style="margin:0; font-size:15px; color:var(--text-muted);">Danh sách giảng viên và quyền hạn trong hệ thống</p>
+              </div>
+            </div>
             <div style="display:flex; gap:10px;">
               <input type="text" id="gv-search-input" placeholder="Tìm tên hoặc mã GV..." style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:15px; width:200px;" oninput="filterLecturers()" />
               <button class="btn btn-primary" onclick="openAddLecturerModal()">+ Thêm Mới</button>
@@ -591,9 +606,12 @@
         <div id="students" class="admin-section">
           <!-- Header -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <div>
-              <h2 class="section-title" style="margin:0;">🎓 Quản lý sinh viên</h2>
-              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Danh sách sinh viên và lịch sử nộp bài trong hệ thống</p>
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+              <span style="font-size: 28px; line-height: 1;">🎓</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2 class="section-title" style="margin:0; line-height: 1;">Quản lý sinh viên</h2>
+                <p style="margin:0; font-size:15px; color:var(--text-muted);">Danh sách sinh viên và lịch sử nộp bài trong hệ thống</p>
+              </div>
             </div>
           </div>
 
@@ -713,9 +731,12 @@
         <!-- ═══════════════════════════════════════════ -->
         <div id="export" class="admin-section">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <div>
-              <h2 class="section-title" style="margin:0;">📤 Xuất báo cáo</h2>
-              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Xuất dữ liệu hệ thống ra file Excel / CSV chuẩn đại học</p>
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+              <span style="font-size: 28px; line-height: 1;">📤</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2 class="section-title" style="margin:0; line-height: 1;">Xuất báo cáo</h2>
+                <p style="margin:0; font-size:15px; color:var(--text-muted);">Xuất dữ liệu hệ thống ra file Excel / CSV chuẩn đại học</p>
+              </div>
             </div>
           </div>
 
@@ -898,9 +919,12 @@
         <!-- SECTION: Lịch Sử Đăng Nhập -->
         <div id="history" class="admin-section">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <div>
-              <h2 class="section-title" style="margin:0;">🔑 Lịch sử đăng nhập</h2>
-              <p style="margin:4px 0 0; font-size:15px; color:var(--text-muted);">Giám sát toàn bộ lịch sử đăng nhập của các giảng viên trong hệ thống</p>
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+              <span style="font-size: 28px; line-height: 1;">🔑</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2 class="section-title" style="margin:0; line-height: 1;">Lịch sử đăng nhập</h2>
+                <p style="margin:0; font-size:15px; color:var(--text-muted);">Theo dõi thời gian đăng nhập của tài khoản Quản trị viên</p>
+              </div>
             </div>
           </div>
           <!-- Filter bar -->
@@ -1035,11 +1059,12 @@
 <!-- SECTION: KIỂM TRA TRÙNG LẶP -->
   <div id="duplicates" class="admin-section" style="display:none;">
     <div style="background:linear-gradient(135deg,var(--bg-color),var(--card-bg));border-radius:14px;padding:22px 28px;box-shadow:0 6px 20px rgba(0,0,0,0.06);border:1px solid var(--border-color);margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:var(--text-main);letter-spacing:-0.02em;">
-          <span style="font-size:26px;margin-right:8px;vertical-align:middle;">🔍</span>Kiểm Tra Trùng Lặp
-        </h2>
-        <p style="margin:0;font-size:15px;color:var(--text-muted);">Phát hiện các bài tập sao chép nội dung bằng Thuật toán & AI.</p>
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <span style="font-size: 32px; line-height: 1;">🔍</span>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h2 style="margin:0; font-size:22px; font-weight:800; color:var(--text-main); letter-spacing:-0.02em; line-height: 1;">Kiểm Tra Trùng Lặp</h2>
+          <p style="margin:0; font-size:15px; color:var(--text-muted);">Phát hiện các bài tập sao chép nội dung bằng Thuật toán & AI.</p>
+        </div>
       </div>
       <div id="scan-button-container">
         <!-- Nút này chỉ hiện cho Admin -->

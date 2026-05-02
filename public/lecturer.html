@@ -329,14 +329,18 @@
     <!-- Main content area -->
     <main class="main-lecturer">
       <!-- Header with title and button-controls -->
-      <div class="header-lecturer">
-        <h1 id="page-title"><span style="font-size:26px; margin-right:6px;">📚</span>Quản lý bài tập</h1>
+      <div class="header-lecturer" style="align-items: flex-start; margin-bottom: 32px;">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <span style="font-size: 32px; line-height: 1;">📚</span>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <h1 id="page-title" style="margin: 0; font-size: 26px; font-weight: 800; color: var(--text-main,#1e293b); line-height: 1;">Quản lý bài tập</h1>
+            <div class="lecturer-info-text" id="lecturer-info" style="margin: 0; font-size: 15px; color: var(--text-muted,#64748b); font-weight: 500;"></div>
+          </div>
+        </div>
         <div class="header-controls">
           <button id="btn-export" class="accent" style="display:none">Xuất Excel</button>
         </div>
       </div>
-
-      <div class="lecturer-info-text" id="lecturer-info"></div>
 
       <!-- ═══════════════════ DASHBOARD SECTION ═══════════════════ -->
       <div id="section-dashboard" class="section-lecturer active">
@@ -726,11 +730,12 @@
 <!-- SECTION: KIỂM TRA TRÙNG LẶP -->
   <div id="section-duplicates" class="section-lecturer" style="display:none;">
     <div style="background:linear-gradient(135deg,var(--bg-color),var(--card-bg));border-radius:14px;padding:22px 28px;box-shadow:0 6px 20px rgba(0,0,0,0.06);border:1px solid var(--border-color);margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <h2 style="margin:0 0 6px;font-size:22px;font-weight:800;color:var(--text-main);letter-spacing:-0.02em;">
-          <span style="font-size:26px;margin-right:8px;vertical-align:middle;">🔍</span>Kiểm Tra Trùng Lặp
-        </h2>
-        <p style="margin:0;font-size:15px;color:var(--text-muted);">Phát hiện các bài tập sao chép nội dung bằng Thuật toán & AI.</p>
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <span style="font-size: 32px; line-height: 1;">🔍</span>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h2 style="margin:0; font-size:22px; font-weight:800; color:var(--text-main); letter-spacing:-0.02em; line-height: 1;">Kiểm Tra Trùng Lặp</h2>
+          <p style="margin:0; font-size:15px; color:var(--text-muted);">Phát hiện các bài tập sao chép nội dung bằng Thuật toán & AI.</p>
+        </div>
       </div>
       <div id="scan-button-container">
         <!-- Nút này chỉ hiện cho Admin -->
