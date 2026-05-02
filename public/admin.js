@@ -1676,7 +1676,7 @@ function renderExercisesAdminTable(data, tbody) {
           <button onclick="openAdminExModal('${r.MaBaiTap}')"
             style="padding:5px 10px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:7px; font-size:14px; font-weight:600; cursor:pointer;" title="Xem chi tiết">👁</button>
           <button onclick="event.stopPropagation(); deleteExerciseAdmin('${r.MaBaiTap}', this)"
-            style="padding:5px 10px; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:7px; font-size:14px; font-weight:600; cursor:pointer;" title="Xóa bài tập">🗑</button>
+            style="padding:5px 10px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; font-weight:600; cursor:pointer;" title="Lưu trữ/Ẩn bài tập">📦</button>
         </div>
       </td>
     </tr>`;
@@ -1787,19 +1787,19 @@ function statCardFilter(type) {
   }
 }
 async function deleteExerciseAdmin(maBaiTap, btn) {
-  if (!confirm(`Xóa bài tập [${maBaiTap}]?\nBài tập sẽ bị ẩn khỏi hệ thống.`)) return;
+  if (!confirm(`Lưu trữ bài tập [${maBaiTap}]?\nBài tập sẽ được ẩn khỏi danh sách hiển thị nhưng không bị mất dữ liệu.`)) return;
   btn.disabled = true; btn.textContent = '⏳';
   try {
     const res = await fetch(`/api/admin/exercise/${maBaiTap}`, { method: 'DELETE', credentials: 'include' });
     if (res.ok) {
-      showToast(`🗑 Đã xóa bài tập ${maBaiTap}`, 'success');
+      showToast(`📦 Đã lưu trữ bài tập ${maBaiTap}`, 'success');
       loadExercisesAdmin();
     } else {
       const e = await res.json();
       showToast('Lỗi: ' + (e.error || ''), 'error');
-      btn.disabled = false; btn.textContent = '🗑 Xóa';
+      btn.disabled = false; btn.textContent = '📦';
     }
-  } catch (err) { showToast('Lỗi kết nối', 'error'); btn.disabled = false; btn.textContent = '🗑 Xóa'; }
+  } catch (err) { showToast('Lỗi kết nối', 'error'); btn.disabled = false; btn.textContent = '📦'; }
 }
 
 // ═══════════════════════════════════════
