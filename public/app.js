@@ -83,18 +83,22 @@ function renderSidebar() {
     const firstLetter = (s.subject_name || 'S').charAt(0).toUpperCase();
     li.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
       <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
-        <div class="subject-icon" style="flex-shrink:0; width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:var(--bg-main, #f1f5f9); color:var(--text-main, #334155); border-radius:6px; font-size:13px; font-weight:800; border:1px solid var(--border-color, #e2e8f0); transition:all 0.2s;">${firstLetter}</div>
-        <span class="subject-text" style="font-weight:600; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.subject_name)}</span>
+        <div class="subject-icon" style="flex-shrink:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:var(--bg-main, #f1f5f9); color:var(--text-main, #1e293b); border-radius:8px; font-size:15px; font-weight:800; border:1px solid var(--border-color, #e2e8f0); transition:all 0.2s;">${firstLetter}</div>
+        <span class="subject-text" style="font-weight:600; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:15px;">${escapeHtml(s.subject_name)}</span>
       </div>
       <div class="subject-badge-container" style="flex-shrink:0;">
-        ${isActive ? `<span style="font-size:16px; margin-left:8px; opacity:0.9;">✓</span>` : `<span style="font-size:12px; background:var(--border); color:var(--text-muted); padding:2px 8px; border-radius:12px; font-weight:800;">${s.total_exercises}</span>`}
+        ${isActive ? `` : `<span style="font-size:12px; background:var(--border); color:var(--text-muted); padding:2px 8px; border-radius:12px; font-weight:800;">${s.total_exercises}</span>`}
       </div>
     </div>`;
     li.onclick = async () => { await selectSubject(s.subject_id); renderSidebar(); };
     if (isActive) {
       li.classList.add('active');
       const icon = li.querySelector('.subject-icon');
-      if (icon) { icon.style.background = '#6366f1'; icon.style.color = '#fff'; icon.style.borderColor = '#6366f1'; }
+      if (icon) { 
+        icon.style.background = 'rgba(255,255,255,0.2)'; 
+        icon.style.color = '#fff'; 
+        icon.style.borderColor = 'transparent'; 
+      }
     }
     ul.appendChild(li);
   });
