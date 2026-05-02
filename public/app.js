@@ -82,7 +82,7 @@ function renderSidebar() {
     const isActive = state.currentSubject && state.currentSubject.subject_id === s.subject_id;
     const firstLetter = (s.subject_name || 'S').charAt(0).toUpperCase();
     li.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-      <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px;">
         <div class="subject-icon" style="flex-shrink:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:var(--bg-main, #f1f5f9); color:var(--text-main, #1e293b); border-radius:8px; font-size:15px; font-weight:800; border:1px solid var(--border-color, #e2e8f0); transition:all 0.2s;">${firstLetter}</div>
         <span class="subject-text" style="font-weight:600; line-height:1.4; font-size:15px; white-space:normal;">${escapeHtml(s.subject_name)}</span>
       </div>
