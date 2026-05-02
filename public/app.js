@@ -199,21 +199,52 @@ function renderSubject() {
   } catch (e) { /* ignore summary errors */ }
   const container = document.getElementById('forms-container');
   container.innerHTML = '';
-  // sort forms by difficulty (easy -> medium -> hard) then by name
-  s.forms.sort((a,b) => {
+  // 1. Filter all forms and their exercises first
+  const q = state.searchQuery && state.searchQuery.toLowerCase();
+  const filteredForms = [];
+  
+  (s.forms || []).forEach(f => {
+    const filteredExercises = (f.exercises || []).filter(ex => {
+      if (state.difficultyFilter && state.difficultyFilter !== 'all') {
+        const lab = (normalizeDifficultyLabel(ex.difficulty) || '').toLowerCase();
+        if (state.difficultyFilter === 'easy' && lab !== 'dễ') return false;
+        if (state.difficultyFilter === 'medium' && lab !== 'trung bình') return false;
+        if (state.difficultyFilter === 'hard' && lab !== 'khó') return false;
+      }
+      if (!q) return true;
+      const titleMatch = (ex.title || '').toLowerCase().includes(q);
+      const descMatch = (ex.description || '').toLowerCase().includes(q);
+      const kwMatch = (ex.ai_keywords || '').toLowerCase().includes(q);
+      return titleMatch || descMatch || kwMatch;
+    });
+    
+    if (filteredExercises.length > 0) {
+      filteredForms.push({ ...f, exercises: filteredExercises, exercise_count: filteredExercises.length });
+    }
+  });
+
+  // sort filtered forms by difficulty then by name
+  filteredForms.sort((a,b) => {
     const da = DIFF_ORDER[(normalizeDifficultyLabel(a.difficulty)||a.difficulty||'').toLowerCase()] ?? 1;
     const db = DIFF_ORDER[(normalizeDifficultyLabel(b.difficulty)||b.difficulty||'').toLowerCase()] ?? 1;
     if (da !== db) return da - db;
     return (a.name||'').localeCompare(b.name||'');
   });
 
-  // paginate forms: show `formsPerPage` forms per page
+  // 2. paginate the FILTERED forms
   const formsPerPage = state.formsPerPage || 2;
-  const totalFormPages = Math.max(1, Math.ceil((s.forms||[]).length / formsPerPage));
+  const totalFormPages = Math.max(1, Math.ceil(filteredForms.length / formsPerPage));
   if (!state.currentPage || state.currentPage < 1) state.currentPage = 1;
   if (state.currentPage > totalFormPages) state.currentPage = totalFormPages;
+  
+  if (filteredForms.length === 0) {
+    container.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-muted); font-size:16px;">Không tìm thấy bài tập nào phù hợp với từ khóa/bộ lọc.</div>';
+    renderPagination(totalFormPages);
+    return;
+  }
+
   const startIdx = (state.currentPage - 1) * formsPerPage;
-  const pageForms = (s.forms || []).slice(startIdx, startIdx + formsPerPage);
+  const pageForms = filteredForms.slice(startIdx, startIdx + formsPerPage);
 
   pageForms.forEach((form, formIndex) => {
     const card = document.createElement('div');
@@ -234,27 +265,11 @@ function renderSubject() {
     h.innerHTML = `<span style="font-size:21px; font-weight:800; color:var(--text-heading); background:linear-gradient(90deg, #6366f1, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Dạng ${globalIndex} - ${escapeHtml(form.name)}</span>
                    <span style="background:#e0e7ff; color:#4338ca; font-size:14px; font-weight:700; padding:4px 10px; border-radius:20px; box-shadow:0 2px 4px rgba(67,56,202,0.1);">[ ${form.exercise_count} Bài ]</span>`;
     card.appendChild(h);
-    // (Removed) do not display form-level grading criteria here — show per-exercise criteria in modal only
 
-    // create grid for exercise cards (student-facing)
     const grid = document.createElement('div');
     grid.className = 'exercise-grid';
 
-    // apply search filter
-    const q = state.searchQuery && state.searchQuery.toLowerCase();
-    const filtered = (form.exercises || []).filter(ex => {
-      if (state.difficultyFilter && state.difficultyFilter !== 'all') {
-        const lab = (normalizeDifficultyLabel(ex.difficulty) || '').toLowerCase();
-        if (state.difficultyFilter === 'easy' && lab !== 'dễ') return false;
-        if (state.difficultyFilter === 'medium' && lab !== 'trung bình') return false;
-        if (state.difficultyFilter === 'hard' && lab !== 'khó') return false;
-      }
-      if (!q) return true;
-      const titleMatch = (ex.title || '').toLowerCase().includes(q);
-      const descMatch = (ex.description || '').toLowerCase().includes(q);
-      const kwMatch = (ex.ai_keywords || '').toLowerCase().includes(q);
-      return titleMatch || descMatch || kwMatch;
-    });
+    const filtered = form.exercises;
     // sort by difficulty (easy -> medium -> hard), then by numeric order extracted from title (e.g. "Bài 10")
     // fall back to localeCompare when no numeric prefix is found
     filtered.sort((a, b) => {
