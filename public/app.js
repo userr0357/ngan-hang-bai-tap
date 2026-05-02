@@ -239,7 +239,8 @@ function renderSubject() {
   
   if (filteredForms.length === 0) {
     container.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-muted); font-size:16px;">Không tìm thấy bài tập nào phù hợp với từ khóa/bộ lọc.</div>';
-    renderPagination(totalFormPages);
+    const pagination = document.getElementById('pagination-control');
+    if (pagination) pagination.style.display = 'none';
     return;
   }
 
