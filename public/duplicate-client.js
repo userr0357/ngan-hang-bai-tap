@@ -7,7 +7,7 @@ async function loadDuplicatesSection() {
             btn.style.display = 'flex';
         }
 
-        const res = await fetch('/api/duplicate/reports');
+        const res = await fetch('/api/duplicate/reports', { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load reports');
         const data = await res.json();
         const tbody = document.getElementById('duplicates-tbody');
@@ -15,33 +15,32 @@ async function loadDuplicatesSection() {
         
         if (data.reports.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">🎉 Tuyệt vời! Không có bài tập nào nghi ngờ sao chép.</td></tr>';
-            return;
-        }
-        
-        // Cần lưu reports vào biến toàn cục để modal dùng
-        window.currentDuplicateReports = data.reports;
-        
-        tbody.innerHTML = data.reports.map(r => {
-            let scoreColor = r.SimilarityScore >= 90 ? '#ef4444' : '#f59e0b';
-            let scoreBadge = `<span style="background:${scoreColor}20;color:${scoreColor};padding:4px 8px;border-radius:6px;font-weight:700;font-size:14px;">${r.SimilarityScore}%</span>`;
+        } else {
+            // Cần lưu reports vào biến toàn cục để modal dùng
+            window.currentDuplicateReports = data.reports;
             
-            return `
-            <tr style="border-bottom:1px solid var(--border-color);">
-                <td style="padding:14px;">${scoreBadge}<br><span style="font-size:12px;color:var(--text-muted);">${r.DetectedBy}</span></td>
-                <td style="padding:14px;">
-                    <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">${r.TenA}</div>
-                    <div style="font-size:12px;color:var(--text-muted);">GV: ${r.GVA}</div>
-                </td>
-                <td style="padding:14px;">
-                    <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">${r.TenB}</div>
-                    <div style="font-size:12px;color:var(--text-muted);">GV: ${r.GVB}</div>
-                </td>
-                <td style="padding:14px;">
-                    <button onclick="openDuplicateModal(${r.ReportId})" style="background:var(--bg-color);border:1px solid var(--border-color);padding:6px 12px;border-radius:6px;cursor:pointer;color:var(--text-main);font-weight:600;font-size:13px;">👁 Đối soát</button>
-                </td>
-            </tr>
-            `;
-        }).join('');
+            tbody.innerHTML = data.reports.map(r => {
+                let scoreColor = r.SimilarityScore >= 90 ? '#ef4444' : '#f59e0b';
+                let scoreBadge = `<span style="background:${scoreColor}20;color:${scoreColor};padding:4px 8px;border-radius:6px;font-weight:700;font-size:14px;">${r.SimilarityScore}%</span>`;
+                
+                return \`
+                <tr style="border-bottom:1px solid var(--border-color);">
+                    <td style="padding:14px;">\${scoreBadge}<br><span style="font-size:12px;color:var(--text-muted);">\${r.DetectedBy}</span></td>
+                    <td style="padding:14px;">
+                        <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">\${r.TenA}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">GV: \${r.GVA}</div>
+                    </td>
+                    <td style="padding:14px;">
+                        <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">\${r.TenB}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">GV: \${r.GVB}</div>
+                    </td>
+                    <td style="padding:14px;">
+                        <button onclick="openDuplicateModal(\${r.ReportId})" style="background:var(--bg-color);border:1px solid var(--border-color);padding:6px 12px;border-radius:6px;cursor:pointer;color:var(--text-main);font-weight:600;font-size:13px;">👁 Đối soát</button>
+                    </td>
+                </tr>
+                \`;
+            }).join('');
+        }
         
     } catch (e) {
         console.error(e);
@@ -63,7 +62,7 @@ async function startDuplicateScan() {
     }
     
     try {
-        const res = await fetch('/api/duplicate/scan', { method: 'POST' });
+        const res = await fetch('/api/duplicate/scan', { method: 'POST', credentials: 'include' });
         const data = await res.json();
         if (res.ok) {
             alert(`Quét hoàn tất! Đã kiểm tra ${data.totalChecked} bài. Phát hiện thêm ${data.duplicatesFound} trường hợp nghi ngờ.`);
@@ -185,6 +184,7 @@ async function handleDuplicateAction(action) {
         const res = await fetch(`/api/duplicate/reports/${reportId}/action`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
             body: JSON.stringify({ action })
         });
         
@@ -202,8 +202,12 @@ async function handleDuplicateAction(action) {
 
 async function loadDuplicateHistory() {
     try {
-        const res = await fetch('/api/duplicate/reports/history');
-        if (!res.ok) return;
+        const res = await fetch('/api/duplicate/reports/history', { credentials: 'include' });
+        if (!res.ok) {
+            const err = await res.text();
+            document.getElementById('duplicate-history-tbody').innerHTML = `<tr><td colspan="5" style="color:red">Lỗi server: ${err}</td></tr>`;
+            return;
+        }
         const data = await res.json();
         const tbody = document.getElementById('duplicate-history-tbody');
         if (!tbody) return;
@@ -243,13 +247,15 @@ async function loadDuplicateHistory() {
         }).join('');
     } catch (e) {
         console.error(e);
+        const tbody = document.getElementById('duplicate-history-tbody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:red">Lỗi tải dữ liệu: ${e.message}</td></tr>`;
     }
 }
 
 async function restoreDuplicateReport(reportId) {
     if (!confirm("Khôi phục lại quyết định này? (Bài B sẽ được đưa trở lại danh sách nếu đã bị xóa gộp)")) return;
     try {
-        const res = await fetch(`/api/duplicate/reports/${reportId}/restore`, { method: 'POST' });
+        const res = await fetch(`/api/duplicate/reports/${reportId}/restore`, { method: 'POST', credentials: 'include' });
         if (res.ok) {
             loadDuplicatesSection(); // Refresh both tables
         } else {
