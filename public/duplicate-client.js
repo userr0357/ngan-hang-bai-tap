@@ -133,7 +133,6 @@ function openDuplicateModal(reportId, isHistory = false) {
                           <span style="background:#e0e7ff;padding:2px 6px;border-radius:4px;">Cập nhật: ${formatDate(report.UpdatedA)}</span>`;
     }
     const rawA = document.getElementById('dup-a-raw');
-    if (rawA) rawA.innerText = (report.MoTaA || '') + '\n\nYêu cầu:\n' + (report.YeuCauA || '');
     
     // Fill B
     document.getElementById('dup-b-title').innerText = report.TenB;
@@ -146,7 +145,6 @@ function openDuplicateModal(reportId, isHistory = false) {
                           <span style="background:#fee2e2;padding:2px 6px;border-radius:4px;">Cập nhật: ${formatDate(report.UpdatedB)}</span>`;
     }
     const rawB = document.getElementById('dup-b-raw');
-    if (rawB) rawB.innerText = (report.MoTaB || '') + '\n\nYêu cầu:\n' + (report.YeuCauB || '');
     
     // Keywords
     function renderKw(kwStr) {
@@ -160,12 +158,32 @@ function openDuplicateModal(reportId, isHistory = false) {
     document.getElementById('dup-a-kw').innerHTML = renderKw(report.KwA);
     document.getElementById('dup-b-kw').innerHTML = renderKw(report.KwB);
     
-    // Highlight logic (simple word matching)
+    // Highlight logic (Phrase matching)
     if (rawA && rawB) {
-        const textA = rawA.innerText;
-        const textB = rawB.innerText;
-        // This could be enhanced with diff-match-patch. For now we just show the raw text as requested, 
-        // Admin can visually compare. If we want red/black text, we can use a basic diff.
+        const textA = (report.MoTaA || '') + '\n\nYêu cầu:\n' + (report.YeuCauA || '');
+        const textB = (report.MoTaB || '') + '\n\nYêu cầu:\n' + (report.YeuCauB || '');
+        
+        const escapeHtml = (unsafe) => (unsafe||'').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        let aSafe = escapeHtml(textA);
+        let bSafe = escapeHtml(textB);
+        
+        const splitRegex = /([.,!?;:\n]+)/;
+        const sentencesA = aSafe.split(splitRegex);
+        const sentencesB = bSafe.split(splitRegex);
+        
+        const clean = s => s.toLowerCase().replace(/[^a-z0-9áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ]/g, '');
+        const setB = new Set(sentencesB.map(clean).filter(s => s.length > 15));
+        const setA = new Set(sentencesA.map(clean).filter(s => s.length > 15));
+        
+        rawA.innerHTML = sentencesA.map(s => {
+            if (clean(s).length > 15 && setB.has(clean(s))) return `<span style="background-color: #fef08a; color: #854d0e; font-weight: 600; border-radius: 3px; padding: 0 2px;">${s}</span>`;
+            return s;
+        }).join('');
+        
+        rawB.innerHTML = sentencesB.map(s => {
+            if (clean(s).length > 15 && setA.has(clean(s))) return `<span style="background-color: #fef08a; color: #854d0e; font-weight: 600; border-radius: 3px; padding: 0 2px;">${s}</span>`;
+            return s;
+        }).join('');
     }
     
     // Ẩn nút xử lý nếu là chế độ xem lịch sử
