@@ -904,7 +904,27 @@
         </div>
         <label>Mô tả Markdown</label>
         <div id="ai-duplicate-result" style="margin:4px 0"></div>
-        <textarea name="description" id="field-description" rows="4" placeholder="Mô tả chi tiết bài tập..."></textarea>
+        <div class="md-toolbar" style="display:flex; gap:6px; margin-bottom:0; flex-wrap:wrap; background:var(--bg-color,#f1f5f9); padding:6px; border:1.5px solid var(--border-color,#e2e8f0); border-bottom:none; border-radius:9px 9px 0 0;">
+          <button type="button" class="md-btn" onclick="insertMarkdown('**', '**')" title="Tô đậm"><b>B</b></button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('*', '*')" title="In nghiêng"><i>I</i></button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('<u>', '</u>')" title="Gạch chân"><u>U</u></button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('# ', '')" title="Tiêu đề 1">H1</button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('## ', '')" title="Tiêu đề 2">H2</button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('### ', '')" title="Tiêu đề 3">H3</button>
+          <div style="width:1px; background:var(--border-color); margin:0 4px;"></div>
+          <button type="button" class="md-btn" onclick="insertMarkdown('- ', '')" title="Danh sách chấm">• List</button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('1. ', '')" title="Danh sách số">1. List</button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('> ', '')" title="Trích dẫn">” Quote</button>
+          <div style="width:1px; background:var(--border-color); margin:0 4px;"></div>
+          <button type="button" class="md-btn" onclick="insertMarkdown('`', '`')" title="Code Inline">`Code`</button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('```\n', '\n```')" title="Code Block">&lt;/&gt;</button>
+          <button type="button" class="md-btn" onclick="insertMarkdown('[', '](url)')" title="Chèn Link">🔗 Link</button>
+        </div>
+        <textarea name="description" id="field-description" rows="4" placeholder="Mô tả chi tiết bài tập..." style="border-radius:0 0 9px 9px; margin-top:0; border-top:1px dashed var(--border-color,#e2e8f0);"></textarea>
+        <style>
+          .md-btn { padding: 4px 8px; background: var(--card-bg,#fff); border: 1px solid var(--border-color,#e2e8f0); border-radius: 6px; cursor: pointer; color: var(--text-main,#1e293b); font-size: 14px; font-weight: 600; transition: background 0.15s; }
+          .md-btn:hover { background: var(--border-color,#e2e8f0); }
+        </style>
         <div style="display:flex;gap:8px;margin:6px 0">
           <button type="button" onclick="runDuplicateCheck()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:#f1f5f9;color:var(--text-main);border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">🔍 Kiểm tra trùng lặp</button>
         </div>
@@ -1129,6 +1149,21 @@
   <script src="/app.js"></script>
   <script src="/duplicate-client.js"></script>
   <script>
+    function insertMarkdown(prefix, suffix) {
+      const textarea = document.getElementById('field-description');
+      if (!textarea) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      const selectedText = text.substring(start, end);
+      
+      const replacement = prefix + selectedText + suffix;
+      textarea.value = text.substring(0, start) + replacement + text.substring(end);
+      
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+    }
+
     // ── Profile card ──
     function updateProfileCard(lec, subjects) {
       if(!lec) return;
