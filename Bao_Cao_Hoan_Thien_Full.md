@@ -87,7 +87,32 @@ Hệ thống áp dụng kiến trúc kiểm tra trùng lặp 2 lớp:
 * **Giảng viên:** Thêm, sửa, xóa bài tập của mình. Quản lý sinh viên, xem lịch sử làm bài, gửi phản hồi nội bộ.
 * **Sinh viên:** Tra cứu bài tập bằng thanh công cụ Deep Search, xem yêu cầu chi tiết (được highlight code syntax rõ ràng).
 
-### 3.2. Mô hình Use Case
+### 3.2. Các chức năng cốt lõi của hệ thống
+
+#### 3.2.1. Quản trị Cơ sở dữ liệu Bài tập (CRUD qua MS SQL Server)
+Thay vì sử dụng các tệp JSON tĩnh gây nghẽn cổ chai khi dữ liệu lớn, hệ thống hiện tại tương tác trực tiếp với **Microsoft SQL Server**. Backend Node.js thực thi các lệnh truy vấn phức tạp (JOIN, WHERE) thông qua thư viện `mssql` để lưu trữ đồng bộ bài tập cùng với các thông số nâng cao như Môn học, Độ khó, Tiêu chí chấm điểm và File đính kèm. Khóa ngoại đảm bảo tính toàn vẹn tuyệt đối của dữ liệu.
+
+#### 3.2.2. Kiến trúc Xử lý API Backend (RESTful)
+Hệ thống cung cấp một bộ API mạnh mẽ, đóng vai trò giao tiếp giữa Client và Server. Các luồng xử lý (routes) được chia nhỏ theo từng nghiệp vụ: `admin-routes.js` (quản lý người dùng, thống kê), `duplicate-routes.js` (xử lý logic quét trùng lặp). Việc trao đổi dữ liệu hoàn toàn bằng định dạng JSON giúp phản hồi giao diện tức thời mà không cần tải lại toàn trang.
+
+#### 3.2.3. Phân quyền RBAC và Quản lý bảo mật (Auth)
+Hệ thống áp dụng mô hình phân quyền Role-Based Access Control (RBAC) nghiêm ngặt gồm 3 cấp độ: Sinh viên, Giảng viên và Admin. 
+* Sinh viên chỉ được cấp quyền "Read-only" để tra cứu. 
+* Giảng viên yêu cầu đăng nhập bằng Mật khẩu mã hóa để thao tác với kho bài tập cá nhân. Đặc biệt, hệ thống tích hợp bảng `LOGIN_HISTORY` để ghi log các phiên làm việc và bảng `PasswordResetOTP` để tự động hóa quy trình cấp lại mật khẩu qua Email.
+
+#### 3.2.4. Nhập liệu hàng loạt (Import) và Xử lý tệp tải lên
+Để tiết kiệm thời gian, Giảng viên có thể tải lên một file dữ liệu (JSON/Excel) chứa hàng trăm bài tập. Backend sử dụng thư viện `multer` để tiếp nhận luồng file (stream) và phân giải trực tiếp vào các bảng tương ứng trong SQL Server. Hệ thống cũng cho phép đính kèm các tệp mã nguồn đính kèm (.zip, .pdf) trực tiếp vào yêu cầu của đề bài.
+
+#### 3.2.5. Trích xuất và Lưu vết Dữ liệu (Export & Audit Logging)
+Chức năng cho phép Giảng viên hoặc Admin xuất toàn bộ danh sách bài tập hiện hành ra định dạng JSON/Excel phục vụ mục đích sao lưu. Mỗi thao tác xuất dữ liệu đều được hệ thống tự động ghi nhận vào bảng `EXPORT_LOG` (lưu thông tin người xuất, thời gian, số lượng bản ghi) nhằm đảm bảo tính minh bạch và tránh thất thoát dữ liệu của Khoa.
+
+#### 3.2.6. Tích hợp AI và Quét Trùng lặp (Deduplication)
+Đây là chức năng "xương sống" và đột phá nhất của đồ án. Hệ thống không còn phải rà soát thủ công, mà sử dụng cơ chế kiểm tra 2 lớp: Thuật toán mã băm HardHash và Gọi API **Trí tuệ nhân tạo (AI Groq)**. Khi phát hiện các bài tập có tỷ lệ ngữ nghĩa giống nhau, hệ thống ghi vào bảng `DUPLICATE_REPORTS`, hiển thị giao diện đối soát 2 cột (Side-by-side comparison) bôi vàng các đoạn văn trùng lặp để Admin ra quyết định Gộp (Merge) hoặc Bỏ qua.
+
+#### 3.2.7. Cơ chế Render Giao diện (SSR và CSR kết hợp)
+Hệ thống không chỉ trả về API thuần mà còn sử dụng Express để thiết lập thư mục tĩnh (public/views), gửi các tệp HTML/CSS/JS đến Client. Giao diện được xử lý linh hoạt: phần khung sườn (Header, Sidebar) được render sẵn, còn nội dung chi tiết (Danh sách bài tập, Thống kê biểu đồ) được Client-Side Rendering gọi ngầm API để vẽ lại, mang đến trải nghiệm cực kỳ mượt mà.
+
+### 3.3. Mô hình Use Case
 `[CHÈN HÌNH ẢNH: Sơ đồ Use Case tổng quát của hệ thống (Bao gồm Actor Admin, Giảng viên, Sinh viên)]`
 * **Use Case Đăng nhập:** Yêu cầu xác thực mật khẩu mã hóa. Có hỗ trợ quên mật khẩu qua OTP.
 * **Use Case Quản lý Bài tập (CRUD):** Thêm mới (hỗ trợ đính kèm file, markdown), Cập nhật, Xóa mềm (IsDeleted).
@@ -230,3 +255,7 @@ Nhiều trường học (như KHTN, Bách Khoa, UIT) tự dựng các hệ thố
 **Nhận xét chung:** Qua việc nghiên cứu các hệ thống trong và ngoài nước, nhóm nhận thấy một khoảng trống lớn: Hầu hết các công cụ hiện nay hoặc là "Quá phức tạp, thiên về thi đấu", hoặc là "Quá đại trà, không có tính năng quản trị chuyên sâu". 
 
 Từ đó, dự án **Ngân hàng bài tập lập trình** được thiết kế nhằm điền vào khoảng trống này: Mang lại một giao diện chuẩn Markdown thân thiện, cơ cấu phân loại chặt chẽ theo Môn học - Giảng viên, và đặc biệt là sự hỗ trợ đột phá của thuật toán HardHash và trí tuệ nhân tạo (AI Groq) để đảm bảo chất lượng, dọn dẹp các bài tập bị lặp lại trong môi trường sử dụng chung.
+
+
+
+
