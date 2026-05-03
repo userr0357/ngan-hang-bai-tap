@@ -23,22 +23,22 @@ async function loadDuplicatesSection() {
                 let scoreColor = r.SimilarityScore >= 90 ? '#ef4444' : '#f59e0b';
                 let scoreBadge = `<span style="background:${scoreColor}20;color:${scoreColor};padding:4px 8px;border-radius:6px;font-weight:700;font-size:14px;">${r.SimilarityScore}%</span>`;
                 
-                return \`
+                return `
                 <tr style="border-bottom:1px solid var(--border-color);">
-                    <td style="padding:14px;">\${scoreBadge}<br><span style="font-size:12px;color:var(--text-muted);">\${r.DetectedBy}</span></td>
+                    <td style="padding:14px;">${scoreBadge}<br><span style="font-size:12px;color:var(--text-muted);">${r.DetectedBy}</span></td>
                     <td style="padding:14px;">
-                        <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">\${r.TenA}</div>
-                        <div style="font-size:12px;color:var(--text-muted);">GV: \${r.GVA}</div>
+                        <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">${r.TenA}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">GV: ${r.GVA}</div>
                     </td>
                     <td style="padding:14px;">
-                        <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">\${r.TenB}</div>
-                        <div style="font-size:12px;color:var(--text-muted);">GV: \${r.GVB}</div>
+                        <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;">${r.TenB}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">GV: ${r.GVB}</div>
                     </td>
                     <td style="padding:14px;">
-                        <button onclick="openDuplicateModal(\${r.ReportId})" style="background:var(--bg-color);border:1px solid var(--border-color);padding:6px 12px;border-radius:6px;cursor:pointer;color:var(--text-main);font-weight:600;font-size:13px;">👁 Đối soát</button>
+                        <button onclick="openDuplicateModal(${r.ReportId})" style="background:var(--bg-color);border:1px solid var(--border-color);padding:6px 12px;border-radius:6px;cursor:pointer;color:var(--text-main);font-weight:600;font-size:13px;">👁 Đối soát</button>
                     </td>
                 </tr>
-                \`;
+                `;
             }).join('');
         }
         
