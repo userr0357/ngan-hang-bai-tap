@@ -141,11 +141,13 @@ router.get('/reports/history', async (req, res) => {
         const pool = await getPool();
         let sql = `
             SELECT r.*, 
-                   b1.MaBaiTap as MaA, b1.TenBaiTap as TenA, b1.MaGiangVien as GVA,
-                   b2.MaBaiTap as MaB, b2.TenBaiTap as TenB, b2.MaGiangVien as GVB
+                   b1.MaBaiTap as MaA, b1.TenBaiTap as TenA, b1.MaGiangVien as GVA, b1.YeuCau as YeuCauA, b1.MoTa as MoTaA, b1.MaMon as MonA, b1.MaDoKho as DoKhoA, b1.UpdatedAt as UpdatedA, f1.AI_Summary as SumA, f1.AI_Keywords as KwA,
+                   b2.MaBaiTap as MaB, b2.TenBaiTap as TenB, b2.MaGiangVien as GVB, b2.YeuCau as YeuCauB, b2.MoTa as MoTaB, b2.MaMon as MonB, b2.MaDoKho as DoKhoB, b2.UpdatedAt as UpdatedB, f2.AI_Summary as SumB, f2.AI_Keywords as KwB
             FROM DUPLICATE_REPORTS r
             JOIN BAITAP b1 ON r.BaiTap_A_Id = b1.Id
             JOIN BAITAP b2 ON r.BaiTap_B_Id = b2.Id
+            LEFT JOIN EXERCISE_FEATURES f1 ON f1.BaiTapId = b1.Id
+            LEFT JOIN EXERCISE_FEATURES f2 ON f2.BaiTapId = b2.Id
             WHERE r.Status IN ('MERGED', 'IGNORED')
             ORDER BY r.ReportId DESC
         `;
