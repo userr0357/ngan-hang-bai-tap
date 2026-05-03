@@ -80,8 +80,10 @@ async function startDuplicateScan() {
     }
 }
 
-function openDuplicateModal(reportId) {
-    const report = window.currentDuplicateReports.find(r => r.ReportId === reportId);
+function openDuplicateModal(reportId, isHistory = false) {
+    let report = null;
+    if (window.currentDuplicateReports) report = window.currentDuplicateReports.find(r => r.ReportId === reportId);
+    if (!report && window.duplicateHistoryReports) report = window.duplicateHistoryReports.find(r => r.ReportId === reportId);
     if (!report) return;
     
     document.getElementById('current-dup-report-id').value = reportId;
@@ -166,6 +168,12 @@ function openDuplicateModal(reportId) {
         // Admin can visually compare. If we want red/black text, we can use a basic diff.
     }
     
+    // Ẩn nút xử lý nếu là chế độ xem lịch sử
+    const ignoreBtn = document.querySelector('#duplicate-modal button[onclick*="IGNORE"]');
+    const mergeBtn = document.querySelector('#duplicate-modal button[onclick*="MERGE"]');
+    if (ignoreBtn) ignoreBtn.style.display = isHistory ? 'none' : 'inline-block';
+    if (mergeBtn) mergeBtn.style.display = isHistory ? 'none' : 'inline-block';
+    
     document.getElementById('duplicate-modal').style.display = 'flex';
 }
 
@@ -217,6 +225,8 @@ async function loadDuplicateHistory() {
             return;
         }
         
+        window.duplicateHistoryReports = data.history;
+        
         tbody.innerHTML = data.history.map(r => {
             let statusBadge = r.Status === 'MERGED' 
                 ? `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;font-size:12px;">🗑 Đã Gộp (Xóa B)</span>`
@@ -237,7 +247,10 @@ async function loadDuplicateHistory() {
                     <div style="font-weight:600;color:${r.Status === 'MERGED' ? '#9ca3af;text-decoration:line-through;' : 'var(--text-main);'};margin-bottom:4px;">${r.TenB}</div>
                     <div style="font-size:12px;color:var(--text-muted);">GV: ${r.GVB}</div>
                 </td>
-                <td style="padding:14px;">
+                <td style="padding:14px; display:flex; gap:6px;">
+                    <button onclick="openDuplicateModal(${r.ReportId}, true)" style="background:var(--bg-color);border:1px solid var(--border-color);padding:6px 12px;border-radius:6px;cursor:pointer;color:var(--text-main);font-weight:600;font-size:12px;transition:0.2s;">
+                        👁 Chi tiết
+                    </button>
                     <button onclick="restoreDuplicateReport(${r.ReportId})" style="background:transparent;border:1px solid #10b981;padding:6px 12px;border-radius:6px;cursor:pointer;color:#10b981;font-weight:600;font-size:12px;transition:0.2s;">
                         ↺ Khôi phục
                     </button>
