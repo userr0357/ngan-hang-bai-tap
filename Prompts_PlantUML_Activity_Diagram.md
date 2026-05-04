@@ -235,76 +235,74 @@ stop
 |Người dùng|
 start
 :Truy cập hệ thống Ngân hàng bài tập;
-if (Mục đích sử dụng?) then ([Học tập & Tra cứu])
-  :Sinh viên tìm kiếm & lọc bài tập;
+
+if (Bạn là Sinh viên?) then ([Đúng])
+  |Người dùng|
+  :Tra cứu, tìm kiếm & lọc bài tập;
   |Hệ thống|
   :Truy xuất CSDL SQL Server;
-  if (Có tìm thấy bài?) then ([Có])
-    :Render Markdown đề bài chi tiết;
-  else ([Không])
-    :Báo lỗi không tìm thấy;
-  endif
+  :Render Markdown đề bài chi tiết;
   stop
-else ([Quản trị nội dung])
-  |Ban quản trị|
-  :Truy cập trang Đăng nhập;
-  :Nhập Username & Password;
-  |Hệ thống|
-  if (Xác thực CSDL?) then ([Sai])
-    |Ban quản trị|
-    if (Quên mật khẩu?) then ([Có])
-      :Yêu cầu cấp lại mật khẩu qua Email;
-      |Hệ thống|
-      :Gửi mã OTP (Lưu PasswordResetOTP);
-      |Ban quản trị|
-      :Nhập mã OTP & Đổi mật khẩu;
-      |Hệ thống|
-      :Cập nhật mật khẩu mới (Bcrypt);
-    else ([Không])
-    endif
-    stop
-  else ([Đúng])
-    |Hệ thống|
-    :Khởi tạo Session & Ghi LOGIN_HISTORY;
-    if (Quyền hạn?) then ([Giảng viên])
-      |Ban quản trị|
-      if (Thao tác quản lý?) then ([Thêm bài / Import JSON])
-        :Soạn thảo Markdown / Upload file;
-        |Hệ thống|
-        :Lưu CSDL & Trích xuất Keywords ẩn;
-      elseif (Thao tác quản lý?) then ([Sửa / Xóa bài tập])
-        |Ban quản trị|
-        :Chỉnh sửa nội dung hoặc Xóa;
-        |Hệ thống|
-        :Cập nhật CSDL (hoặc cờ IsDeleted = 1);
-        :Ghi lưu vết vào EXERCISE_AUDIT_LOG;
-      else ([Xuất dữ liệu Export])
-        |Hệ thống|
-        :Kết xuất dữ liệu ra tệp JSON/Excel;
-        :Ghi sổ nhật ký EXPORT_LOG;
-      endif
-    else ([Admin])
-      |Ban quản trị|
-      if (Chức năng Admin?) then ([Khởi chạy Quét AI])
-        |Hệ thống|
-        :Tính toán mã băm HardHash toàn kho;
-        :Gọi API Groq Llama-3 so sánh ngữ nghĩa;
-        :Lập báo cáo DUPLICATE_REPORTS;
-      else ([Đối soát & Gộp bài])
-        |Hệ thống|
-        :Mở giao diện so sánh song song 2 cột;
-        :Highlight bôi vàng câu văn trùng lặp;
-        |Ban quản trị|
-        :Quyết định Gộp bài B vào bài A (Merge);
-        |Hệ thống|
-        :Chuyển lịch sử điểm sinh viên sang Bài A;
-        :Xóa bản sao Bài B;
-      endif
-    endif
-    |Hệ thống|
-    :Cập nhật lại giao diện;
-    stop
-  endif
 endif
+
+|Ban quản trị|
+:Truy cập trang Đăng nhập hệ thống;
+|Hệ thống|
+:Kiểm tra xác thực CSDL;
+
+if (Sai tài khoản / Quên mật khẩu?) then ([Đúng])
+  |Ban quản trị|
+  :Yêu cầu cấp lại mật khẩu qua Email;
+  |Hệ thống|
+  :Gửi mã OTP (Lưu PasswordResetOTP);
+  |Ban quản trị|
+  :Nhập mã OTP & Đổi mật khẩu;
+  |Hệ thống|
+  :Cập nhật mật khẩu mới (Bcrypt);
+  stop
+endif
+
+|Hệ thống|
+:Khởi tạo Session & Ghi LOGIN_HISTORY;
+
+if (Quyền Giảng viên?) then ([Đúng])
+  |Ban quản trị|
+  :Truy cập kho bài tập cá nhân;
+  if (Thao tác quản lý?) then ([Thêm / Sửa / Xóa])
+    :Soạn thảo Markdown / Chỉnh sửa / Xóa mềm;
+    |Hệ thống|
+    :Cập nhật CSDL (hoặc cờ IsDeleted = 1);
+  else ([Import / Export File])
+    |Ban quản trị|
+    :Upload file hoặc Yêu cầu tải dữ liệu;
+    |Hệ thống|
+    :Lưu CSDL hàng loạt / Kết xuất JSON;
+  endif
+  |Hệ thống|
+  :Ghi lưu vết vào EXERCISE_AUDIT_LOG (hoặc EXPORT_LOG);
+  :Cập nhật lại giao diện;
+  stop
+endif
+
+|Ban quản trị|
+:Truy cập trang Quản trị Admin;
+if (Chức năng Admin?) then ([Khởi chạy Quét AI])
+  |Hệ thống|
+  :Tính toán mã băm HardHash toàn kho;
+  :Gọi API Groq Llama-3 so sánh ngữ nghĩa;
+  :Lập báo cáo DUPLICATE_REPORTS;
+else ([Đối soát & Gộp bài])
+  |Hệ thống|
+  :Mở giao diện so sánh song song 2 cột;
+  :Highlight bôi vàng câu văn trùng lặp;
+  |Ban quản trị|
+  :Xác nhận Gộp bài B vào bài A (Merge);
+  |Hệ thống|
+  :Chuyển lịch sử điểm sinh viên sang Bài A;
+  :Xóa bản sao Bài B khỏi hệ thống;
+endif
+|Hệ thống|
+:Cập nhật trạng thái Dashboard Admin;
+stop
 @enduml
 ```
