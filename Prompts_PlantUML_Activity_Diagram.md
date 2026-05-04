@@ -223,54 +223,88 @@ stop
 @enduml
 ```
 
-## 10. Sơ đồ Activity Diagram Tổng thể toàn bộ Hệ thống
-*Sơ đồ này mô tả cái nhìn bao quát (chim bay) về luồng sử dụng của cả 3 đối tượng: Sinh viên, Giảng viên và Admin tương tác với Hệ thống.*
+## 10. Sơ đồ Activity Diagram SIÊU CẤU TRÚC (Gộp toàn bộ hệ thống)
+*Đây là "Trùm cuối" kết nối TẤT CẢ 9 chức năng từ lúc Tra cứu, Đăng nhập, Quên mật khẩu OTP, đến Thêm/Sửa/Xóa bài, Import/Export và cuối cùng là Quét AI chống trùng lặp vào trong CÙNG MỘT SƠ ĐỒ DUY NHẤT.*
 
 ```plantuml
 @startuml
 |Người dùng|
-start
-:Truy cập nền tảng Ngân hàng bài tập;
+|Ban quản trị|
 |Hệ thống|
-if (Xác định vai trò?) then ([Sinh viên])
-  |Sinh viên|
-  :Tra cứu bài tập (Deep Search);
+
+|Người dùng|
+start
+:Truy cập hệ thống Ngân hàng bài tập;
+if (Mục đích sử dụng?) then ([Học tập & Tra cứu])
+  :Sinh viên tìm kiếm & lọc bài tập;
   |Hệ thống|
-  :Truy xuất SQL Server;
-  :Render nội dung bài tập (Markdown);
-  |Sinh viên|
-  :Đọc yêu cầu và giải thuật toán;
+  :Truy xuất CSDL SQL Server;
+  if (Có tìm thấy bài?) then ([Có])
+    :Render Markdown đề bài chi tiết;
+  else ([Không])
+    :Báo lỗi không tìm thấy;
+  endif
   stop
-elseif (Xác định vai trò?) then ([Giảng viên])
-  |Giảng viên|
-  :Đăng nhập hệ thống;
+else ([Quản trị nội dung])
+  |Ban quản trị|
+  :Truy cập trang Đăng nhập;
+  :Nhập Username & Password;
   |Hệ thống|
-  :Xác thực và cấp phát Session;
-  |Giảng viên|
-  :Quản lý kho bài tập cá nhân (CRUD);
-  :Import/Export dữ liệu hàng loạt;
-  |Hệ thống|
-  :Lưu dữ liệu vào bảng BAITAP;
-  :Khởi chạy tiến trình trích xuất Keywords;
-  stop
-else ([Admin])
-  |Admin|
-  :Đăng nhập hệ thống;
-  |Hệ thống|
-  :Xác thực phân quyền Admin;
-  |Admin|
-  :Yêu cầu rà quét trùng lặp dữ liệu;
-  |Hệ thống|
-  :Chạy thuật toán HardHash;
-  :Phân tích ngữ nghĩa qua API Groq Llama-3;
-  :Lập báo cáo DUPLICATE_REPORTS;
-  |Admin|
-  :Đối soát song song 2 cột;
-  :Thực hiện Gộp (Merge) bài tập;
-  |Hệ thống|
-  :Cập nhật dữ liệu liên kết Sinh viên;
-  :Làm sạch kho dữ liệu (Xóa bản sao);
-  stop
+  if (Xác thực CSDL?) then ([Sai])
+    |Ban quản trị|
+    if (Quên mật khẩu?) then ([Có])
+      :Yêu cầu cấp lại mật khẩu qua Email;
+      |Hệ thống|
+      :Gửi mã OTP (Lưu PasswordResetOTP);
+      |Ban quản trị|
+      :Nhập mã OTP & Đổi mật khẩu;
+      |Hệ thống|
+      :Cập nhật mật khẩu mới (Bcrypt);
+    else ([Không])
+    endif
+    stop
+  else ([Đúng])
+    |Hệ thống|
+    :Khởi tạo Session & Ghi LOGIN_HISTORY;
+    if (Quyền hạn?) then ([Giảng viên])
+      |Ban quản trị|
+      if (Thao tác quản lý?) then ([Thêm bài / Import JSON])
+        :Soạn thảo Markdown / Upload file;
+        |Hệ thống|
+        :Lưu CSDL & Trích xuất Keywords ẩn;
+      elseif (Thao tác quản lý?) then ([Sửa / Xóa bài tập])
+        |Ban quản trị|
+        :Chỉnh sửa nội dung hoặc Xóa;
+        |Hệ thống|
+        :Cập nhật CSDL (hoặc cờ IsDeleted = 1);
+        :Ghi lưu vết vào EXERCISE_AUDIT_LOG;
+      else ([Xuất dữ liệu Export])
+        |Hệ thống|
+        :Kết xuất dữ liệu ra tệp JSON/Excel;
+        :Ghi sổ nhật ký EXPORT_LOG;
+      endif
+    else ([Admin])
+      |Ban quản trị|
+      if (Chức năng Admin?) then ([Khởi chạy Quét AI])
+        |Hệ thống|
+        :Tính toán mã băm HardHash toàn kho;
+        :Gọi API Groq Llama-3 so sánh ngữ nghĩa;
+        :Lập báo cáo DUPLICATE_REPORTS;
+      else ([Đối soát & Gộp bài])
+        |Hệ thống|
+        :Mở giao diện so sánh song song 2 cột;
+        :Highlight bôi vàng câu văn trùng lặp;
+        |Ban quản trị|
+        :Quyết định Gộp bài B vào bài A (Merge);
+        |Hệ thống|
+        :Chuyển lịch sử điểm sinh viên sang Bài A;
+        :Xóa bản sao Bài B;
+      endif
+    endif
+    |Hệ thống|
+    :Cập nhật lại giao diện;
+    stop
+  endif
 endif
 @enduml
 ```
