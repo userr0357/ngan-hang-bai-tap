@@ -222,3 +222,55 @@ endif
 stop
 @enduml
 ```
+
+## 10. Sơ đồ Activity Diagram Tổng thể toàn bộ Hệ thống
+*Sơ đồ này mô tả cái nhìn bao quát (chim bay) về luồng sử dụng của cả 3 đối tượng: Sinh viên, Giảng viên và Admin tương tác với Hệ thống.*
+
+```plantuml
+@startuml
+|Người dùng|
+start
+:Truy cập nền tảng Ngân hàng bài tập;
+|Hệ thống|
+if (Xác định vai trò?) then ([Sinh viên])
+  |Sinh viên|
+  :Tra cứu bài tập (Deep Search);
+  |Hệ thống|
+  :Truy xuất SQL Server;
+  :Render nội dung bài tập (Markdown);
+  |Sinh viên|
+  :Đọc yêu cầu và giải thuật toán;
+  stop
+elseif (Xác định vai trò?) then ([Giảng viên])
+  |Giảng viên|
+  :Đăng nhập hệ thống;
+  |Hệ thống|
+  :Xác thực và cấp phát Session;
+  |Giảng viên|
+  :Quản lý kho bài tập cá nhân (CRUD);
+  :Import/Export dữ liệu hàng loạt;
+  |Hệ thống|
+  :Lưu dữ liệu vào bảng BAITAP;
+  :Khởi chạy tiến trình trích xuất Keywords;
+  stop
+else ([Admin])
+  |Admin|
+  :Đăng nhập hệ thống;
+  |Hệ thống|
+  :Xác thực phân quyền Admin;
+  |Admin|
+  :Yêu cầu rà quét trùng lặp dữ liệu;
+  |Hệ thống|
+  :Chạy thuật toán HardHash;
+  :Phân tích ngữ nghĩa qua API Groq Llama-3;
+  :Lập báo cáo DUPLICATE_REPORTS;
+  |Admin|
+  :Đối soát song song 2 cột;
+  :Thực hiện Gộp (Merge) bài tập;
+  |Hệ thống|
+  :Cập nhật dữ liệu liên kết Sinh viên;
+  :Làm sạch kho dữ liệu (Xóa bản sao);
+  stop
+endif
+@enduml
+```
