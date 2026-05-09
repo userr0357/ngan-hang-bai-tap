@@ -76,11 +76,11 @@ module.exports = function(app, auth) {
       if (!req.user || !req.user.is_admin) return res.status(403).json({ error: 'Không có quyền truy cập' });
       const pool = await db.getPool();
       const check = await pool.request().input('id', mssql.VarChar, req.params.id)
-        .query('SELECT Id FROM BAITAP WHERE MaBaiTap=@id AND (IsDeleted = 0 OR IsDeleted IS NULL)');
+        .query('SELECT Id FROM BAITAP WHERE (MaBaiTap=@id OR CAST(Id AS VARCHAR)=@id) AND (IsDeleted = 0 OR IsDeleted IS NULL)');
       if (!check.recordset.length) return res.status(404).json({ error: 'Không tìm thấy bài tập' });
       
       await pool.request().input('id', mssql.VarChar, req.params.id)
-        .query('UPDATE BAITAP SET IsDeleted = 1, UpdatedAt = GETUTCDATE() WHERE MaBaiTap=@id');
+        .query('UPDATE BAITAP SET IsDeleted = 1, UpdatedAt = GETUTCDATE() WHERE MaBaiTap=@id OR CAST(Id AS VARCHAR)=@id');
       res.json({ success: true });
     } catch(e) {
       console.error('Admin delete exercise:', e.message);
@@ -96,7 +96,7 @@ module.exports = function(app, auth) {
         .query(`SELECT b.*, dk.TenDoKho, d.TenDangBai, m.TenMon, gv.TenGiangVien
           FROM BAITAP b LEFT JOIN DOKHO dk ON dk.MaDoKho=b.MaDoKho LEFT JOIN DANGBAI d ON d.MaDangBai=b.MaDangBai
           LEFT JOIN MONHOC m ON m.MaMon=b.MaMon LEFT JOIN GIANGVIEN gv ON gv.MaGiangVien=b.MaGiangVien
-          WHERE b.MaBaiTap=@id`);
+          WHERE b.MaBaiTap=@id OR CAST(b.Id AS VARCHAR)=@id`);
       if (!r.recordset.length) return res.status(404).json({ error: 'Not found' });
       
       const ex = r.recordset[0];
@@ -153,7 +153,8 @@ module.exports = function(app, auth) {
       const pool = await db.getPool();
       const r = pool.request();
       let sql = `SELECT TOP 200 Id, ExerciseId, LecturerId, LecturerName, ExerciseTitle,
-        Action, ActionTime, SubjectId, FormId, Details, CreatedAt, action_type
+        Action, ActionTime, SubjectId, FormId, Details, CreatedAt, action_type,
+        CreatedData, UpdatedData, DeletedData, Changes
         FROM EXERCISE_AUDIT_LOG WHERE 1=1`;
       const { lecturer, subject, from, to } = req.query;
       if (lecturer) { sql += ' AND LecturerId = @gv'; r.input('gv', mssql.VarChar, lecturer); }
@@ -168,7 +169,8 @@ module.exports = function(app, auth) {
         lecturer_id: r.LecturerId, lecturer_name: r.LecturerName,
         action: r.Action, timestamp: r.ActionTime || r.CreatedAt,
         subject_id: r.SubjectId, form_id: r.FormId, details: r.Details,
-        action_type: r.action_type
+        action_type: r.action_type,
+        created_data: r.CreatedData, updated_data: r.UpdatedData, deleted_data: r.DeletedData, changes: r.Changes
       })));
     } catch(e) { console.error('exercise-activity:', e.message); res.json([]); }
   });
@@ -179,14 +181,16 @@ module.exports = function(app, auth) {
       const pool = await db.getPool();
       const r = await pool.request();
       const result = await r.query(`SELECT TOP 200 Id, ExerciseId, LecturerId, LecturerName, ExerciseTitle,
-        Action, ActionTime, SubjectId, FormId, Details, CreatedAt, action_type
+        Action, ActionTime, SubjectId, FormId, Details, CreatedAt, action_type,
+        CreatedData, UpdatedData, DeletedData, Changes
         FROM EXERCISE_AUDIT_LOG ORDER BY COALESCE(ActionTime, CreatedAt) DESC`);
       res.json(result.recordset.map(r => ({
         id: r.Id, exercise_id: r.ExerciseId, exercise_title: r.ExerciseTitle || r.ExerciseId,
         lecturer_id: r.LecturerId, lecturer_name: r.LecturerName,
         action: r.Action, timestamp: r.ActionTime || r.CreatedAt,
         subject_id: r.SubjectId, form_id: r.FormId, details: r.Details,
-        action_type: r.action_type
+        action_type: r.action_type,
+        created_data: r.CreatedData, updated_data: r.UpdatedData, deleted_data: r.DeletedData, changes: r.Changes
       })));
     } catch(e) { console.error('exercise-audit:', e.message); res.json([]); }
   });
@@ -361,12 +365,29 @@ module.exports = function(app, auth) {
 
   app.post('/api/admin/lecturer/lock', auth, async (req, res) => {
     try {
-      const { lecturer_id, reason } = req.body;
+      const { lecturer_id, reason, duration, blockUntil } = req.body;
       const pool = await db.getPool();
-      await pool.request().input('id', mssql.VarChar, lecturer_id).input('reason', mssql.NVarChar, reason || '')
-        .input('by', mssql.VarChar, req.user.lecturer_id)
-        .query(`INSERT INTO LECTURER_BLOCK_LOG (LecturerId, Action, Reason, BlockedBy, ActionTime, CreatedAt) VALUES (@id, N'LOCK', @reason, @by, GETDATE(), GETDATE())`);
-      res.json({ success: true });
+      const mssql = require('mssql');
+      const transaction = new mssql.Transaction(pool);
+      await transaction.begin();
+
+      try {
+        const r1 = new mssql.Request(transaction);
+        await r1.input('id', mssql.VarChar, lecturer_id)
+          .input('reason', mssql.NVarChar, reason || '')
+          .input('by', mssql.VarChar, req.user.lecturer_id)
+          .query(`INSERT INTO LECTURER_BLOCK_LOG (LecturerId, Action, Reason, BlockedBy, ActionTime, CreatedAt) VALUES (@id, N'LOCK', @reason, @by, GETDATE(), GETDATE())`);
+
+        const r2 = new mssql.Request(transaction);
+        await r2.input('id', mssql.VarChar, lecturer_id)
+          .query(`UPDATE GIANGVIEN SET IsBlocked = 1 WHERE MaGiangVien = @id`);
+
+        await transaction.commit();
+        res.json({ success: true });
+      } catch (err) {
+        await transaction.rollback();
+        throw err;
+      }
     } catch(e) { res.status(500).json({ error: e.message }); }
   });
 
@@ -374,10 +395,26 @@ module.exports = function(app, auth) {
     try {
       const { lecturer_id } = req.body;
       const pool = await db.getPool();
-      await pool.request().input('id', mssql.VarChar, lecturer_id)
-        .input('by', mssql.VarChar, req.user.lecturer_id)
-        .query(`INSERT INTO LECTURER_BLOCK_LOG (LecturerId, Action, Reason, BlockedBy, ActionTime, CreatedAt) VALUES (@id, N'UNLOCK', N'', @by, GETDATE(), GETDATE())`);
-      res.json({ success: true });
+      const mssql = require('mssql');
+      const transaction = new mssql.Transaction(pool);
+      await transaction.begin();
+
+      try {
+        const r1 = new mssql.Request(transaction);
+        await r1.input('id', mssql.VarChar, lecturer_id)
+          .input('by', mssql.VarChar, req.user.lecturer_id)
+          .query(`INSERT INTO LECTURER_BLOCK_LOG (LecturerId, Action, Reason, BlockedBy, ActionTime, CreatedAt) VALUES (@id, N'UNLOCK', N'', @by, GETDATE(), GETDATE())`);
+
+        const r2 = new mssql.Request(transaction);
+        await r2.input('id', mssql.VarChar, lecturer_id)
+          .query(`UPDATE GIANGVIEN SET IsBlocked = 0 WHERE MaGiangVien = @id`);
+
+        await transaction.commit();
+        res.json({ success: true });
+      } catch (err) {
+        await transaction.rollback();
+        throw err;
+      }
     } catch(e) { res.status(500).json({ error: e.message }); }
   });
 
@@ -418,9 +455,9 @@ module.exports = function(app, auth) {
     try {
       const pool = await db.getPool();
       // By Subject
-      const subR = await pool.request().query(`SELECT m.TenMon AS label, COUNT(b.Id) AS value
+      const subR = await pool.request().query(`SELECT m.MaMon AS mamon, m.TenMon AS label, COUNT(b.Id) AS value
         FROM MONHOC m LEFT JOIN BAITAP b ON b.MaMon=m.MaMon AND (b.IsDeleted=0 OR b.IsDeleted IS NULL)
-        GROUP BY m.TenMon`);
+        GROUP BY m.MaMon, m.TenMon`);
       // By Level
       const lvlR = await pool.request().query(`SELECT SkillLevel AS label, COUNT(*) AS value
         FROM BAITAP WHERE (IsDeleted=0 OR IsDeleted IS NULL) GROUP BY SkillLevel ORDER BY SkillLevel`);

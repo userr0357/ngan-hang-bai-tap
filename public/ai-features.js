@@ -227,6 +227,18 @@ function useAIDescription() {
 function useAIRequirements() {
   const requirements = window.lastAIResult?.requirements;
   if (!requirements || !Array.isArray(requirements)) return;
+  
+  try {
+    if (typeof currentRequirements !== 'undefined' && typeof renderRequirements === 'function') {
+      if (!Array.isArray(currentRequirements)) currentRequirements = [];
+      else currentRequirements.length = 0;
+      currentRequirements.push(...requirements);
+      renderRequirements();
+      closeAIGenerationModal();
+      return;
+    }
+  } catch(e) {}
+
   const list = document.getElementById('admin-requirements-list') || document.getElementById('requirements-list');
   if (list) {
     list.innerHTML = '';
@@ -265,34 +277,57 @@ function useAIFullResult() {
   
   // 2. Fill Requirements
   if (Array.isArray(result.requirements)) {
-    const list = document.getElementById('requirements-list');
-    if (list) {
-      list.innerHTML = '';
-      result.requirements.forEach(req => {
-        const div = document.createElement('div');
-        div.style.margin = '6px 0';
-        div.innerHTML = `<input type="text" class="admin-req-input" value="${req}" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px" /><button type="button" class="admin-req-delete" style="margin-left:6px;padding:4px 8px;background:#c00;color:white;border:none;border-radius:3px;cursor:pointer">Xoá</button>`;
-        div.querySelector('.admin-req-delete').addEventListener('click', () => div.remove());
-        list.appendChild(div);
-      });
-    }
+    try {
+      if (typeof currentRequirements !== 'undefined' && typeof renderRequirements === 'function') {
+        if (!Array.isArray(currentRequirements)) currentRequirements = [];
+        else currentRequirements.length = 0;
+        currentRequirements.push(...result.requirements);
+        renderRequirements();
+      } else {
+        const list = document.getElementById('requirements-list');
+        if (list) {
+          list.innerHTML = '';
+          result.requirements.forEach(req => {
+            const div = document.createElement('div');
+            div.style.margin = '6px 0';
+            div.innerHTML = `<input type="text" class="admin-req-input" value="${req}" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px" /><button type="button" class="admin-req-delete" style="margin-left:6px;padding:4px 8px;background:#c00;color:white;border:none;border-radius:3px;cursor:pointer">Xoá</button>`;
+            div.querySelector('.admin-req-delete').addEventListener('click', () => div.remove());
+            list.appendChild(div);
+          });
+        }
+      }
+    } catch(e) { console.error(e); }
   }
   
   // 3. Fill Grading Criteria
   if (Array.isArray(result.grading_criteria)) {
-    const list = document.getElementById('grading-list');
-    if (list) {
-      list.innerHTML = '';
-      result.grading_criteria.forEach(crit => {
-        const name = typeof crit === 'string' ? crit : (crit.text || crit.name || '');
-        const points = typeof crit === 'object' ? (crit.weight || crit.points || 10) : 10;
-        const div = document.createElement('div');
-        div.style.display = 'flex'; div.style.gap = '6px'; div.style.margin = '6px 0'; div.style.alignItems = 'center';
-        div.innerHTML = `<input type="text" class="admin-grade-name" value="${name}" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:4px" /><input type="number" class="admin-grade-points" value="${points}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:4px" /><button type="button" class="admin-grade-delete" style="padding:4px 8px;background:#c00;color:white;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">Xoá</button>`;
-        div.querySelector('.admin-grade-delete').addEventListener('click', () => div.remove());
-        list.appendChild(div);
-      });
-    }
+    try {
+      if (typeof currentGrades !== 'undefined' && typeof renderGradingList === 'function') {
+        if (!Array.isArray(currentGrades)) currentGrades = [];
+        else currentGrades.length = 0;
+        const newGrades = result.grading_criteria.map(crit => ({
+          name: typeof crit === 'string' ? crit : (crit.text || crit.name || ''),
+          points: typeof crit === 'object' ? (crit.weight || crit.points || 10) : 10,
+          note: ''
+        }));
+        currentGrades.push(...newGrades);
+        renderGradingList();
+      } else {
+        const list = document.getElementById('grading-list');
+        if (list) {
+          list.innerHTML = '';
+          result.grading_criteria.forEach(crit => {
+            const name = typeof crit === 'string' ? crit : (crit.text || crit.name || '');
+            const points = typeof crit === 'object' ? (crit.weight || crit.points || 10) : 10;
+            const div = document.createElement('div');
+            div.style.display = 'flex'; div.style.gap = '6px'; div.style.margin = '6px 0'; div.style.alignItems = 'center';
+            div.innerHTML = `<input type="text" class="admin-grade-name" value="${name}" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:4px" /><input type="number" class="admin-grade-points" value="${points}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:4px" /><button type="button" class="admin-grade-delete" style="padding:4px 8px;background:#c00;color:white;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">Xoá</button>`;
+            div.querySelector('.admin-grade-delete').addEventListener('click', () => div.remove());
+            list.appendChild(div);
+          });
+        }
+      }
+    } catch(e) { console.error(e); }
   }
   
   closeAIGenerationModal();
@@ -429,6 +464,28 @@ async function validateExerciseContent(event) {
               ${result.suggestions.map(s => `<li style="margin-bottom:4px;">${s}</li>`).join('')}
             </ul>
           </div>` : ''}
+        ${result.improved_grading_criteria && result.improved_grading_criteria.length ? `
+          <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(0,0,0,0.1);">
+            <strong style="color:#047857;">🎯 Đề xuất Bộ Tiêu Chí Nâng Cao (Do AI gợi ý):</strong>
+            <ul style="margin:8px 0 12px 0; padding-left:20px; font-size:14px; color:#1e293b;">
+              ${result.improved_grading_criteria.map(c => `<li style="margin-bottom:4px;">${c.name} <strong>(${c.points}%)</strong></li>`).join('')}
+            </ul>
+            <button type="button" class="btn btn-sm" style="background:#10b981; color:white; font-weight:bold; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;" onclick='applyImprovedCriteria(${JSON.stringify(result.improved_grading_criteria).replace(/'/g, "\\'")})'>
+              ✨ Thay thế Tiêu chí cũ bằng bộ này
+            </button>
+          </div>
+        ` : ''}
+        ${result.suggested_storyline ? `
+          <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(0,0,0,0.1);">
+            <strong style="color:#4338ca;">🎭 Đề xuất Cốt truyện / Ngữ cảnh mới (Chống Đạo Đề):</strong>
+            <p style="margin:8px 0; font-size:14px; color:#334155; font-style:italic; background:#e0e7ff; padding:10px; border-radius:6px; border-left:4px solid #4f46e5;">
+              "${result.suggested_storyline}"
+            </p>
+            <button type="button" class="btn btn-sm" style="background:#4f46e5; color:white; font-weight:bold; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;" onclick='applyStoryline(${JSON.stringify(result.suggested_storyline).replace(/'/g, "\\'")})'>
+              📝 Chèn Cốt truyện này vào Mô tả
+            </button>
+          </div>
+        ` : ''}
       </div>
     `;
 
@@ -444,6 +501,51 @@ async function validateExerciseContent(event) {
 // =========================================================
 //  3. INITIALIZATION
 // =========================================================
+
+/**
+ * Áp dụng Cốt truyện mới vào Mô tả
+ */
+window.applyStoryline = function(storyline) {
+  const descField = document.getElementById('admin-field-description') || document.getElementById('field-description');
+  if (descField) {
+    const currentVal = descField.value.trim();
+    if (currentVal) {
+      descField.value = `**Ngữ cảnh:** ${storyline}\n\n---\n\n**Yêu cầu kỹ thuật:**\n${currentVal}`;
+    } else {
+      descField.value = storyline;
+    }
+    if (typeof showToast === 'function') showToast('✅ Đã chèn cốt truyện vào mô tả!');
+    else alert('Đã chèn cốt truyện vào mô tả!');
+  } else {
+    alert('Không tìm thấy ô nhập mô tả.');
+  }
+};
+
+/**
+ * Áp dụng tiêu chí chấm điểm nâng cao do AI kiểm định đề xuất
+ */
+window.applyImprovedCriteria = function(newCriteria) {
+  try {
+    if (typeof currentGrades !== 'undefined' && typeof renderGradingList === 'function') {
+      if (!Array.isArray(currentGrades)) currentGrades = [];
+      else currentGrades.length = 0;
+      const parsedGrades = newCriteria.map(crit => ({
+        name: typeof crit === 'string' ? crit : (crit.text || crit.name || ''),
+        points: typeof crit === 'object' ? (crit.weight || crit.points || 10) : 10,
+        note: ''
+      }));
+      currentGrades.push(...parsedGrades);
+      renderGradingList();
+      if (typeof showToast === 'function') showToast('✅ Đã cập nhật thành công bộ tiêu chí chấm điểm nâng cao!');
+      else alert('Đã cập nhật thành công bộ tiêu chí chấm điểm nâng cao!');
+    } else {
+      alert('Không tìm thấy form để áp dụng. Hãy thử lại.');
+    }
+  } catch (e) {
+    console.error('Lỗi khi áp dụng tiêu chí:', e);
+    alert('Không thể áp dụng tiêu chí, vui lòng thử lại.');
+  }
+};
 
 /**
  * Khởi tạo AI features (gọi khi admin.js load)

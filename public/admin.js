@@ -158,7 +158,7 @@ function renderLecturersTable(searchQuery = '') {
     const avatarColor = avatarColors[gv.MaGiangVien.charCodeAt(gv.MaGiangVien.length - 1) % avatarColors.length];
 
     // Role badge
-    const roleBadge = gv.Quyen === 'admin'
+    const roleBadge = (gv.Quyen || '').trim().toLowerCase() === 'admin'
       ? '<span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:20px; font-size:12px; font-weight:700;">🛡 Admin</span>'
       : '<span style="background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:20px; font-size:12px; font-weight:600;">👨‍🏫 GV</span>';
 
@@ -510,7 +510,7 @@ async function openEditLecturerModal(magv) {
     const initials = (gv.TenGiangVien || '??').split(' ').map(w => w[0]).slice(-2).join('').toUpperCase();
     document.getElementById('edit-modal-avatar').textContent = initials;
     document.getElementById('edit-modal-title').textContent = gv.TenGiangVien;
-    document.getElementById('edit-modal-subtitle').textContent = `Mã: ${gv.MaGiangVien} • ${gv.Quyen === 'admin' ? '🛡 Admin' : '👨‍🏫 Giảng Viên'}`;
+    document.getElementById('edit-modal-subtitle').textContent = `Mã: ${gv.MaGiangVien} • ${(gv.Quyen||'').trim().toLowerCase() === 'admin' ? '🛡 Admin' : '👨‍🏫 Giảng Viên'}`;
     document.getElementById('edit-gv-name').value = gv.TenGiangVien || '';
     document.getElementById('edit-gv-username').value = gv.TenDangNhap || gv.MaGiangVien;
     document.getElementById('edit-gv-email').value = gv.Email || '';
@@ -1185,7 +1185,7 @@ async function confirmLockGV() {
     const res = await fetch('/api/admin/lecturer/lock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ magv, reason, duration, blockUntil: blockUntil || null }),
+      body: JSON.stringify({ lecturer_id: magv, reason, duration, blockUntil: blockUntil || null }),
       credentials: 'include'
     });
     const data = await res.json();
@@ -1297,7 +1297,7 @@ async function openProfileModal(magv) {
     document.getElementById('profile-avatar').textContent = initials;
     document.getElementById('profile-name').textContent = info.TenGiangVien;
     document.getElementById('profile-sub').textContent =
-      `${info.MaGiangVien} • ${info.Quyen === 'admin' ? '🛡 Admin' : '👨‍🏫 Giảng viên'} • ${info.IsBlocked ? '🔒 Đã khóa' : '✅ Hoạt động'}`;
+      `${info.MaGiangVien} • ${(info.Quyen||'').trim().toLowerCase() === 'admin' ? '🛡 Admin' : '👨‍🏫 Giảng viên'} • ${info.IsBlocked ? '🔒 Đã khóa' : '✅ Hoạt động'}`;
 
     // Stats cards
     const statCards = [
@@ -1517,25 +1517,155 @@ function renderExerciseActivityTable(data, tbody) {
     return;
   }
   const fmt = dt => dt ? new Date(dt).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
-  const levelColors = { 1:'#10b981', 2:'#f59e0b', 3:'#f97316', 4:'#ef4444', 5:'#7c3aed' };
+  
+  // Store data globally for the eye icon to access
+  window._exerciseActivityData = data;
 
-  tbody.innerHTML = data.map(r => {
-    const tenBai = r.TenBaiTap || r.TieuDe || '(Không có tên)';
-    const lvColor = '#6366f1';
-    return `<tr>
-      <td style="padding:12px 14px; text-align:center;">
-        <span style="background:#f0fdf4; color:#16a34a; padding:3px 10px; border-radius:20px; font-size:14px; font-weight:600;">📝 ${r.HanhDong || 'Bài tập'}</span>
+  tbody.innerHTML = data.map((r, index) => {
+    const tenBai = r.exercise_title || r.exercise_id || '(Không có tên)';
+    
+    // Action Badge
+    let actionBadge = '';
+    const actionLower = (r.action || '').toLowerCase();
+    if (actionLower.includes('tạo') || actionLower.includes('thêm') || actionLower === 'create' || actionLower === 'add') {
+      actionBadge = '<span style="background:#f0fdf4; color:#16a34a; padding:3px 10px; border-radius:20px; font-size:13px; font-weight:700;"><i class="fas fa-plus"></i> Thêm mới</span>';
+    } else if (actionLower.includes('sửa') || actionLower.includes('cập nhật') || actionLower === 'update' || actionLower === 'edit') {
+      actionBadge = '<span style="background:#eff6ff; color:#2563eb; padding:3px 10px; border-radius:20px; font-size:13px; font-weight:700;"><i class="fas fa-edit"></i> Cập nhật</span>';
+    } else if (actionLower.includes('xóa') || actionLower === 'delete') {
+      actionBadge = '<span style="background:#fef2f2; color:#dc2626; padding:3px 10px; border-radius:20px; font-size:13px; font-weight:700;"><i class="fas fa-trash"></i> Xóa</span>';
+    } else {
+      actionBadge = `<span style="background:#f1f5f9; color:#475569; padding:3px 10px; border-radius:20px; font-size:13px; font-weight:700;">${r.action || 'Khác'}</span>`;
+    }
+
+    // Eye icon for details (only if there are details, usually for updates)
+    let eyeBtn = '—';
+    if (r.details) {
+      eyeBtn = `<button onclick="showActivityDetails(${index})" style="background:#f8fafc; color:#6366f1; border:1px solid #e2e8f0; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; transition:all 0.2s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe';" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">👁️ Chi tiết</button>`;
+    }
+
+    return `<tr style="border-bottom:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <td style="padding:14px 14px; text-align:center;">${actionBadge}</td>
+      <td style="padding:14px 14px;">
+        <div style="font-weight:700; color:var(--text-main); max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${tenBai}">${tenBai}</div>
+        <div style="font-size:13px; color:var(--text-muted); font-family:monospace; margin-top:3px;">ID: ${r.exercise_id || '—'}</div>
       </td>
-      <td style="padding:12px 14px; font-weight:600; color:var(--text-main); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${tenBai}">${tenBai}</td>
-      <td style="padding:12px 14px; font-size:15px; color:var(--text-main);">${r.TenGiangVien || r.MaGiangVien || '—'}</td>
-      <td style="padding:12px 14px; font-size:15px; color:var(--text-main);">${r.TenMon || r.MaMon || '—'}</td>
-      <td style="padding:12px 14px; text-align:center;">
-        <span style="background:#ede9fe; color:#5b21b6; padding:3px 10px; border-radius:20px; font-size:14px; font-weight:600;">${r.Level || r.MaDoKho || '—'}</span>
+      <td style="padding:14px 14px;">
+        <div style="font-weight:600; color:var(--text-main);">${r.lecturer_name || '—'}</div>
+        <div style="font-size:13px; color:var(--text-muted); margin-top:3px;">${r.lecturer_id || '—'}</div>
       </td>
-      <td style="padding:12px 14px; text-align:center; font-size:15px; color:var(--text-muted); white-space:nowrap;">${fmt(r.UpdatedAt)}</td>
-      <td style="padding:12px 14px; text-align:center; font-size:15px; color:var(--text-muted); white-space:nowrap;">—</td>
+      <td style="padding:14px 14px; font-size:14px; color:var(--text-main); font-weight:500;">
+        <span style="background:#ede9fe; color:#5b21b6; padding:3px 10px; border-radius:20px; font-size:13px; font-weight:600;">📚 ${r.subject_id || '—'}</span>
+      </td>
+      <td style="padding:14px 14px; font-size:14px; color:var(--text-muted);">${r.form_id || '—'}</td>
+      <td style="padding:14px 14px; text-align:center; font-size:14px; color:var(--text-main); font-weight:500;">${fmt(r.timestamp)}</td>
+      <td style="padding:14px 14px; text-align:center;">${eyeBtn}</td>
     </tr>`;
   }).join('');
+}
+
+function showActivityDetails(index) {
+  const data = window._exerciseActivityData[index];
+  if (!data || !data.details) return;
+  
+  let detailsObj;
+  try {
+    detailsObj = typeof data.details === 'string' ? JSON.parse(data.details) : data.details;
+  } catch(e) {
+    detailsObj = { raw: data.details };
+  }
+
+  let infoHtml = `
+    <div style="background:#f1f5f9; padding:16px; border-radius:12px; margin-bottom:20px; display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:14px;">
+      <div><strong style="color:#475569">Bài tập:</strong> <span style="color:#0f172a; font-weight:600">${data.exercise_title || '—'}</span> <span style="color:#64748b; font-size:13px">(ID: ${data.exercise_id || '—'})</span></div>
+      <div><strong style="color:#475569">Giảng viên:</strong> <span style="color:#0f172a; font-weight:600">${data.lecturer_name || '—'}</span> <span style="color:#64748b; font-size:13px">(ID: ${data.lecturer_id || '—'})</span></div>
+      <div><strong style="color:#475569">Môn học:</strong> <span style="color:#0f172a">${data.subject_id || '—'}</span></div>
+      <div><strong style="color:#475569">Dạng bài:</strong> <span style="color:#0f172a">${data.form_id || '—'}</span></div>
+      <div><strong style="color:#475569">Thời gian:</strong> <span style="color:#0f172a">${fmt(data.timestamp)}</span></div>
+      <div><strong style="color:#475569">Hành động:</strong> <span style="color:#0f172a; font-weight:600; text-transform:uppercase;">${data.action || '—'}</span></div>
+    </div>
+  `;
+
+  let htmlContent = '<div style="font-size:14px; background:#fff; color:#334155; text-align:left;">';
+  
+  let changesObj = null;
+  let createdObj = null;
+  let deletedObj = null;
+  try { if (data.changes) changesObj = typeof data.changes === 'string' ? JSON.parse(data.changes) : data.changes; } catch(e) {}
+  try { if (data.created_data) createdObj = typeof data.created_data === 'string' ? JSON.parse(data.created_data) : data.created_data; } catch(e) {}
+  try { if (data.deleted_data) deletedObj = typeof data.deleted_data === 'string' ? JSON.parse(data.deleted_data) : data.deleted_data; } catch(e) {}
+
+  if (changesObj) {
+    htmlContent += '<h4 style="margin:0 0 12px 0; color:#2563eb; font-size:16px; border-bottom:2px solid #bfdbfe; padding-bottom:6px;">Sự thay đổi (Trước và Sau):</h4>';
+    for (const key in changesObj) {
+      const change = changesObj[key];
+      if (change && typeof change === 'object' && ('old' in change || 'new' in change)) {
+        htmlContent += `<div style="margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+          <div style="background:#e2e8f0; padding:6px 12px; font-weight:700; color:#334155;">Thuộc tính: <span style="color:#2563eb;">${key}</span></div>
+          <div style="padding:10px; display:flex; flex-direction:column; gap:6px;">
+            <div style="color:#b91c1c; background:#fef2f2; padding:8px 12px; border-radius:6px; border-left:4px solid #ef4444; font-family:monospace; font-size:13px; white-space:pre-wrap;">- ${JSON.stringify(change.old) || 'null'}</div>
+            <div style="color:#047857; background:#f0fdf4; padding:8px 12px; border-radius:6px; border-left:4px solid #10b981; font-family:monospace; font-size:13px; white-space:pre-wrap;">+ ${JSON.stringify(change.new) || 'null'}</div>
+          </div>
+        </div>`;
+      } else {
+         htmlContent += `<div style="margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+          <div style="background:#e2e8f0; padding:6px 12px; font-weight:700; color:#334155;">Thuộc tính: <span style="color:#2563eb;">${key}</span></div>
+          <div style="padding:10px; color:#047857; background:#f0fdf4; font-family:monospace; font-size:13px; white-space:pre-wrap;">${JSON.stringify(change) || 'null'}</div>
+        </div>`;
+      }
+    }
+  } else if (createdObj) {
+    htmlContent += '<h4 style="margin:0 0 12px 0; color:#16a34a; font-size:16px; border-bottom:2px solid #bbf7d0; padding-bottom:6px;">Dữ liệu bài tập đã tạo:</h4>';
+    htmlContent += `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-family:monospace; font-size:13px; white-space:pre-wrap; color:#334155;">${JSON.stringify(createdObj, null, 2)}</div>`;
+  } else if (deletedObj) {
+    htmlContent += '<h4 style="margin:0 0 12px 0; color:#dc2626; font-size:16px; border-bottom:2px solid #fecaca; padding-bottom:6px;">Dữ liệu bài tập đã xóa:</h4>';
+    htmlContent += `<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; font-family:monospace; font-size:13px; white-space:pre-wrap; color:#991b1b;">${JSON.stringify(deletedObj, null, 2)}</div>`;
+  } else if (detailsObj.before && detailsObj.after) {
+    htmlContent += '<h4 style="margin:0 0 12px 0; color:#2563eb; font-size:16px; border-bottom:2px solid #bfdbfe; padding-bottom:6px;">Sự thay đổi (Trước và Sau):</h4>';
+    for (const key in detailsObj.after) {
+      const beforeVal = detailsObj.before[key];
+      const afterVal = detailsObj.after[key];
+      if (JSON.stringify(beforeVal) !== JSON.stringify(afterVal)) {
+        htmlContent += `<div style="margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+          <div style="background:#e2e8f0; padding:6px 12px; font-weight:700; color:#334155;">Thuộc tính: <span style="color:#2563eb;">${key}</span></div>
+          <div style="padding:10px; display:flex; flex-direction:column; gap:6px;">
+            <div style="color:#b91c1c; background:#fef2f2; padding:8px 12px; border-radius:6px; border-left:4px solid #ef4444; font-family:monospace; font-size:13px; white-space:pre-wrap;">- ${JSON.stringify(beforeVal) || 'null'}</div>
+            <div style="color:#047857; background:#f0fdf4; padding:8px 12px; border-radius:6px; border-left:4px solid #10b981; font-family:monospace; font-size:13px; white-space:pre-wrap;">+ ${JSON.stringify(afterVal) || 'null'}</div>
+          </div>
+        </div>`;
+      }
+    }
+  } else {
+    htmlContent += '<h4 style="margin:0 0 12px 0; color:#475569; font-size:16px; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">Ghi chú / Chi tiết:</h4>';
+    const displayStr = typeof data.details === 'string' ? data.details : JSON.stringify(detailsObj, null, 2);
+    htmlContent += `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-family:monospace; font-size:13px; white-space:pre-wrap; color:#334155;">${displayStr}</div>`;
+  }
+  htmlContent += '</div>';
+
+  // Inject modal into DOM if not exists
+  let modal = document.getElementById('activity-details-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'activity-details-modal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(3px);';
+    modal.innerHTML = `
+      <div style="background:white; width:90%; max-width:650px; border-radius:16px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
+        <div style="padding:20px 24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+          <h3 id="adm-title" style="margin:0; font-size:18px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:8px;">👁️ Chi tiết thay đổi</h3>
+          <button onclick="document.getElementById('activity-details-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#94a3b8; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+        </div>
+        <div id="adm-body" style="padding:24px; overflow-y:auto; flex:1;">
+        </div>
+        <div style="padding:16px 24px; border-top:1px solid #f1f5f9; text-align:right; background:#f8fafc;">
+          <button onclick="document.getElementById('activity-details-modal').style.display='none'" style="background:#6366f1; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; box-shadow:0 4px 6px -1px rgba(99,102,241,0.2);">Đóng</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById('adm-title').innerHTML = `👁️ Chi tiết hoạt động: <span style="color:#6366f1;">${data.exercise_id || data.action || 'Log'}</span>`;
+  document.getElementById('adm-body').innerHTML = infoHtml + htmlContent;
+  modal.style.display = 'flex';
 }
 
 function resetExerciseActivityFilter() {
@@ -1654,11 +1784,12 @@ function renderExercisesAdminTable(data, tbody) {
     const dangBai   = r.TenDangBai ? `<span style="background:var(--bg-color,#f8fafc); color:var(--text-muted); padding:2px 8px; border-radius:4px; font-size:12px; border:1px solid #e2e8f0;">${r.TenDangBai.length > 22 ? r.TenDangBai.slice(0,22)+'…' : r.TenDangBai}</span>` : '—';
     const gvName    = r.TenGiangVien || r.MaGiangVien || '—';
     const initials  = gvName !== '—' ? gvName.split(' ').map(w=>w[0]).slice(-2).join('').toUpperCase() : '?';
+    const exId      = r.MaBaiTap || r.Id;
 
     return `<tr style="transition:background 0.1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-      <td style="padding:13px 14px; cursor:pointer;" onclick="openAdminExModal('${r.MaBaiTap}')">
+      <td style="padding:13px 14px; cursor:pointer;" onclick="openAdminExModal('${exId}')">
         <div style="font-weight:600; color:#2563eb; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:16px;" title="${tenBai}">${tenBai}</div>
-        <div style="font-size:14px; color:var(--text-muted); margin-top:2px; font-family:monospace;">${r.MaBaiTap}</div>
+        <div style="font-size:14px; color:var(--text-muted); margin-top:2px; font-family:monospace;">${r.MaBaiTap || r.Id || ''}</div>
       </td>
       <td style="padding:13px 14px;">${monBadge}<div style="font-size:14px; color:var(--text-muted); margin-top:3px;">${r.TenMon || ''}</div></td>
       <td style="padding:13px 14px;">
@@ -1674,9 +1805,9 @@ function renderExercisesAdminTable(data, tbody) {
       <td style="padding:13px 14px; text-align:center; font-size:15px; color:var(--text-muted); white-space:nowrap;">${fmt(r.UpdatedAt)}</td>
       <td style="padding:13px 14px; text-align:center;">
         <div style="display:flex; gap:6px; justify-content:center;">
-          <button onclick="openAdminExModal('${r.MaBaiTap}')"
+          <button onclick="openAdminExModal('${exId}')"
             style="padding:5px 10px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:7px; font-size:14px; font-weight:600; cursor:pointer;" title="Xem chi tiết">👁</button>
-          <button onclick="event.stopPropagation(); deleteExerciseAdmin('${r.MaBaiTap}', this)"
+          <button onclick="event.stopPropagation(); deleteExerciseAdmin('${exId}', this)"
             style="padding:5px 10px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; font-weight:600; cursor:pointer;" title="Lưu trữ/Ẩn bài tập">📦</button>
         </div>
       </td>
@@ -1787,20 +1918,69 @@ function statCardFilter(type) {
     return;
   }
 }
+function showCustomConfirm(message, onConfirm) {
+  const oldModal = document.getElementById('custom-confirm-modal');
+  if (oldModal) oldModal.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'custom-confirm-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--card-bg,#fff);width:90%;max-width:400px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.2);overflow:hidden;animation:popIn 0.2s ease-out;';
+  
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);background:#fef2f2;color:#dc2626;font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px;';
+  header.innerHTML = '⚠️ Xác nhận thao tác';
+
+  const body = document.createElement('div');
+  body.style.cssText = 'padding:20px;font-size:15px;color:var(--text-main,#1e293b);line-height:1.5;';
+  body.innerHTML = message;
+
+  const footer = document.createElement('div');
+  footer.style.cssText = 'padding:12px 20px;border-top:1px solid var(--border-color,#e2e8f0);display:flex;justify-content:flex-end;gap:10px;background:var(--bg-color,#f8fafc);';
+
+  const btnCancel = document.createElement('button');
+  btnCancel.innerHTML = 'Hủy bỏ';
+  btnCancel.style.cssText = 'padding:8px 16px;border:1.5px solid var(--border-color,#e2e8f0);border-radius:8px;background:none;cursor:pointer;font-weight:600;color:var(--text-muted,#64748b);font-family:inherit;';
+  btnCancel.onclick = () => overlay.remove();
+
+  const btnOk = document.createElement('button');
+  btnOk.innerHTML = 'Xác nhận';
+  btnOk.style.cssText = 'padding:8px 16px;border:none;border-radius:8px;background:#ef4444;color:white;cursor:pointer;font-weight:700;font-family:inherit;';
+  btnOk.onclick = () => { overlay.remove(); onConfirm(); };
+
+  footer.appendChild(btnCancel);
+  footer.appendChild(btnOk);
+  box.appendChild(header);
+  box.appendChild(body);
+  box.appendChild(footer);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  if (!document.getElementById('custom-confirm-style')) {
+      const style = document.createElement('style');
+      style.id = 'custom-confirm-style';
+      style.innerHTML = '@keyframes popIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }';
+      document.head.appendChild(style);
+  }
+}
+
 async function deleteExerciseAdmin(maBaiTap, btn) {
-  if (!confirm(`Lưu trữ bài tập [${maBaiTap}]?\nBài tập sẽ được ẩn khỏi danh sách hiển thị nhưng không bị mất dữ liệu.`)) return;
-  btn.disabled = true; btn.textContent = '⏳';
-  try {
-    const res = await fetch(`/api/admin/exercise/${maBaiTap}`, { method: 'DELETE', credentials: 'include' });
-    if (res.ok) {
-      showToast(`📦 Đã lưu trữ bài tập ${maBaiTap}`, 'success');
-      loadExercisesAdmin();
-    } else {
-      const e = await res.json();
-      showToast('Lỗi: ' + (e.error || ''), 'error');
-      btn.disabled = false; btn.textContent = '📦';
-    }
-  } catch (err) { showToast('Lỗi kết nối', 'error'); btn.disabled = false; btn.textContent = '📦'; }
+  showCustomConfirm(`Lưu trữ bài tập <b>[${maBaiTap}]</b> ?<br><br><span style='font-size:14px;color:var(--text-muted)'>Bài tập sẽ được ẩn khỏi danh sách hiển thị nhưng không bị mất dữ liệu.</span>`, async () => {
+    btn.disabled = true; btn.textContent = '⏳';
+    try {
+      const res = await fetch(`/api/admin/exercise/${encodeURIComponent(maBaiTap)}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        showToast(`📦 Đã lưu trữ bài tập ${maBaiTap}`, 'success');
+        loadExercisesAdmin();
+      } else {
+        const e = await res.json();
+        showToast('Lỗi: ' + (e.error || ''), 'error');
+        btn.disabled = false; btn.textContent = '📦';
+      }
+    } catch (err) { showToast('Lỗi kết nối', 'error'); btn.disabled = false; btn.textContent = '📦'; }
+  });
 }
 
 // ═══════════════════════════════════════
@@ -1819,7 +1999,7 @@ async function openAdminExModal(maBaiTap) {
   body.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">⏳ Đang tải dữ liệu...</div>';
 
   try {
-    const res = await fetch(`/api/admin/exercise/${maBaiTap}?t=${Date.now()}`, { credentials: 'include' });
+    const res = await fetch(`/api/admin/exercise/${encodeURIComponent(maBaiTap)}?t=${Date.now()}`, { credentials: 'include' });
     const ex = await res.json();
     if (!res.ok) throw new Error(ex.error || 'Lỗi');
 

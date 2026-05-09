@@ -677,9 +677,10 @@
                 <th style="padding:12px 16px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted,#64748b);text-transform:uppercase">Bài tập</th>
                 <th style="padding:12px 16px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted,#64748b);text-transform:uppercase">Giảng viên</th>
                 <th style="padding:12px 16px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted,#64748b);text-transform:uppercase">Thời gian</th>
+                <th style="padding:12px 16px;text-align:center;font-size:14px;font-weight:700;color:var(--text-muted,#64748b);text-transform:uppercase">Chi tiết</th>
               </tr>
             </thead>
-            <tbody id="ex-history-tbody"><tr><td colspan="4" style="padding:32px;text-align:center;color:var(--text-muted,#64748b)">Đang tải...</td></tr></tbody>
+            <tbody id="ex-history-tbody"><tr><td colspan="5" style="padding:32px;text-align:center;color:var(--text-muted,#64748b)">Đang tải...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -925,9 +926,11 @@
           .md-btn { padding: 4px 8px; background: var(--card-bg,#fff); border: 1px solid var(--border-color,#e2e8f0); border-radius: 6px; cursor: pointer; color: var(--text-main,#1e293b); font-size: 14px; font-weight: 600; transition: background 0.15s; }
           .md-btn:hover { background: var(--border-color,#e2e8f0); }
         </style>
-        <div style="display:flex;gap:8px;margin:6px 0">
+        <div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;">
           <button type="button" onclick="runDuplicateCheck()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:#f1f5f9;color:var(--text-main);border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">🔍 Kiểm tra trùng lặp</button>
+          <button type="button" id="ai-validate-content-btn" style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:#ecfdf5;color:#047857;border:1.5px solid #a7f3d0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer" onclick="validateExerciseContent(event)">✅ AI Phản Biện & Đề Xuất (Review)</button>
         </div>
+        <div id="ai-validation-result" style="margin:8px 0; display:none;"></div>
 
         <label>Yêu cầu</label>
         <div id="requirements-list"></div>
@@ -1175,7 +1178,18 @@
       if(avatEl) avatEl.textContent = (lec.name||'?')[0].toUpperCase();
       const allowed  = lec.allowed_subjects || [];
       const subCount = lec.is_admin ? (subjects||[]).length : allowed.length;
-      const exCount  = (subjects||[]).reduce((t,s)=>t+(s.total_exercises||0),0);
+      let exCount = 0;
+      if (lec.is_admin) {
+        exCount = (subjects||[]).reduce((t,s)=>t+(s.total_exercises||0),0);
+      } else {
+        (subjects||[]).forEach(s => {
+          (s.forms||[]).forEach(f => {
+            (f.exercises||[]).forEach(ex => {
+              if (ex.owner === lec.lecturer_id) exCount++;
+            });
+          });
+        });
+      }
       const ps = document.getElementById('profile-subjects');
       const pe = document.getElementById('profile-exercises');
       if(ps) ps.textContent = subCount;
@@ -1411,6 +1425,25 @@
     });
 
     // ── Exercise form helpers ──
+    function populateExerciseFormSubjects() {
+      const subSel = document.getElementById('form-subject');
+      if (!subSel) return;
+      const lec = _pageData.lec;
+      const allSubjects = _pageData.subjects;
+      // Filter to allowed subjects only for non-admin lecturers
+      const allowed = lec.allowed_subjects || [];
+      const filtered = (lec.is_admin || !allowed.length)
+        ? allSubjects
+        : allSubjects.filter(s => allowed.includes(s.subject_id));
+      subSel.innerHTML = '<option value="">-- Chọn môn --</option>';
+      filtered.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.subject_id;
+        o.textContent = s.subject_name;
+        subSel.appendChild(o);
+      });
+    }
+
     function onFormSubjectChange() {
       const subSel = document.getElementById('form-subject');
       const formSel = document.getElementById('form-form');
@@ -1522,7 +1555,7 @@
 
     async function deleteExercise(exId, subjectId) {
       if(!confirm('Xóa bài tập này khỏi hệ thống?')) return;
-      const resp = await fetch(`/api/exercise-to-db/${encodeURIComponent(exId)}`, { method:'DELETE', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({subject_id:subjectId}) });
+      const resp = await fetch(`/api/exercise/${encodeURIComponent(exId)}`, { method:'DELETE', credentials:'include' });
       if(!resp.ok){ alert('Không thể xóa: '+(await resp.text())); return; }
       window.location.reload();
     }
@@ -1593,19 +1626,149 @@
       if (!tbody) return;
       try {
         const data = await fetch('/api/admin/exercise-audit', { credentials: 'include' }).then(r => r.ok ? r.json() : []);
-        if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:var(--text-muted)">Chưa có lịch sử</td></tr>'; return; }
-        tbody.innerHTML = data.map(a => {
-          const badge = a.action==='create' ? '<span style="background:#dcfce7;color:#166534;padding:3px 8px;border-radius:20px;font-size:12px;font-weight:700">Tạo</span>'
-                      : a.action==='update' ? '<span style="background:#fef9c3;color:#854d0e;padding:3px 8px;border-radius:20px;font-size:12px;font-weight:700">Sửa</span>'
-                      : '<span style="background:#fee2e2;color:#991b1b;padding:3px 8px;border-radius:20px;font-size:12px;font-weight:700">Xóa</span>';
-          return `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0)">
-            <td style="padding:12px 16px">${badge}</td>
-            <td style="padding:12px 16px;font-size:16px">${a.exercise_title||''}</td>
-            <td style="padding:12px 16px;font-size:15px;color:var(--text-muted,#64748b)">${a.lecturer_id||''}</td>
-            <td style="padding:12px 16px;font-size:14px;color:var(--text-muted,#64748b)">${new Date(a.timestamp).toLocaleString('vi-VN')}</td>
+        if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" style="padding:32px;text-align:center;color:var(--text-muted)">Chưa có lịch sử</td></tr>'; return; }
+        
+        window._lecturerExerciseHistoryData = data;
+        
+        tbody.innerHTML = data.map((a, index) => {
+          // Action Badge
+          let badge = '';
+          const actionLower = (a.action || '').toLowerCase();
+          if (actionLower.includes('tạo') || actionLower.includes('thêm') || actionLower === 'create' || actionLower === 'add') {
+            badge = '<span style="background:#f0fdf4; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:13px; font-weight:700;">Thêm mới</span>';
+          } else if (actionLower.includes('sửa') || actionLower.includes('cập nhật') || actionLower === 'update' || actionLower === 'edit') {
+            badge = '<span style="background:#eff6ff; color:#2563eb; padding:4px 10px; border-radius:20px; font-size:13px; font-weight:700;">Cập nhật</span>';
+          } else if (actionLower.includes('xóa') || actionLower === 'delete') {
+            badge = '<span style="background:#fef2f2; color:#dc2626; padding:4px 10px; border-radius:20px; font-size:13px; font-weight:700;">Xóa</span>';
+          } else {
+            badge = `<span style="background:#f1f5f9; color:#475569; padding:4px 10px; border-radius:20px; font-size:13px; font-weight:700;">${a.action || 'Khác'}</span>`;
+          }
+
+          // Eye icon for details
+          let eyeBtn = '—';
+          if (a.details) {
+            eyeBtn = `<button onclick="showLecturerActivityDetails(${index})" style="background:#f8fafc; color:#6366f1; border:1px solid #e2e8f0; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; transition:all 0.2s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe';" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">👁️ Xem</button>`;
+          }
+
+          return `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0); transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+            <td style="padding:16px">${badge}</td>
+            <td style="padding:16px;">
+              <div style="font-weight:700; color:var(--text-main); font-size:15px; margin-bottom:4px;">${a.exercise_title||''}</div>
+              <div style="font-size:13px; color:var(--text-muted); font-family:monospace;">ID: ${a.exercise_id || '—'}</div>
+            </td>
+            <td style="padding:16px;">
+              <div style="font-weight:600; color:var(--text-main); font-size:14px;">${a.lecturer_name||'—'}</div>
+              <div style="font-size:13px; color:var(--text-muted);">${a.lecturer_id||''}</div>
+            </td>
+            <td style="padding:16px;font-size:14px;color:var(--text-main);font-weight:500;">${new Date(a.timestamp).toLocaleString('vi-VN')}</td>
+            <td style="padding:16px;text-align:center;">${eyeBtn}</td>
           </tr>`;
         }).join('');
-      } catch(e) { if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="padding:24px;text-align:center;color:#ef4444">Lỗi tải dữ liệu</td></tr>'; }
+      } catch(e) { if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#ef4444">Lỗi tải dữ liệu</td></tr>'; }
+    }
+
+    function showLecturerActivityDetails(index) {
+      const data = window._lecturerExerciseHistoryData[index];
+      if (!data || !data.details) return;
+      
+      let detailsObj;
+      try {
+        detailsObj = typeof data.details === 'string' ? JSON.parse(data.details) : data.details;
+      } catch(e) {
+        detailsObj = { raw: data.details };
+      }
+
+      let infoHtml = `
+        <div style="background:#f1f5f9; padding:16px; border-radius:12px; margin-bottom:20px; display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:14px;">
+          <div><strong style="color:#475569">Bài tập:</strong> <span style="color:#0f172a; font-weight:600">${data.exercise_title || '—'}</span> <span style="color:#64748b; font-size:13px">(ID: ${data.exercise_id || '—'})</span></div>
+          <div><strong style="color:#475569">Giảng viên:</strong> <span style="color:#0f172a; font-weight:600">${data.lecturer_name || '—'}</span> <span style="color:#64748b; font-size:13px">(ID: ${data.lecturer_id || '—'})</span></div>
+          <div><strong style="color:#475569">Môn học:</strong> <span style="color:#0f172a">${data.subject_id || '—'}</span></div>
+          <div><strong style="color:#475569">Dạng bài:</strong> <span style="color:#0f172a">${data.form_id || '—'}</span></div>
+          <div><strong style="color:#475569">Thời gian:</strong> <span style="color:#0f172a">${new Date(data.timestamp).toLocaleString('vi-VN')}</span></div>
+          <div><strong style="color:#475569">Hành động:</strong> <span style="color:#0f172a; font-weight:600; text-transform:uppercase;">${data.action || '—'}</span></div>
+        </div>
+      `;
+
+      let htmlContent = '<div style="font-size:14px; background:#fff; color:#334155; text-align:left;">';
+      
+      let changesObj = null;
+      let createdObj = null;
+      let deletedObj = null;
+      try { if (data.changes) changesObj = typeof data.changes === 'string' ? JSON.parse(data.changes) : data.changes; } catch(e) {}
+      try { if (data.created_data) createdObj = typeof data.created_data === 'string' ? JSON.parse(data.created_data) : data.created_data; } catch(e) {}
+      try { if (data.deleted_data) deletedObj = typeof data.deleted_data === 'string' ? JSON.parse(data.deleted_data) : data.deleted_data; } catch(e) {}
+
+      if (changesObj) {
+        htmlContent += '<h4 style="margin:0 0 12px 0; color:#2563eb; font-size:16px; border-bottom:2px solid #bfdbfe; padding-bottom:6px;">Sự thay đổi (Trước và Sau):</h4>';
+        for (const key in changesObj) {
+          const change = changesObj[key];
+          if (change && typeof change === 'object' && ('old' in change || 'new' in change)) {
+            htmlContent += `<div style="margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+              <div style="background:#e2e8f0; padding:6px 12px; font-weight:700; color:#334155;">Thuộc tính: <span style="color:#2563eb;">${key}</span></div>
+              <div style="padding:10px; display:flex; flex-direction:column; gap:6px;">
+                <div style="color:#b91c1c; background:#fef2f2; padding:8px 12px; border-radius:6px; border-left:4px solid #ef4444; font-family:monospace; font-size:13px; white-space:pre-wrap;">- ${JSON.stringify(change.old) || 'null'}</div>
+                <div style="color:#047857; background:#f0fdf4; padding:8px 12px; border-radius:6px; border-left:4px solid #10b981; font-family:monospace; font-size:13px; white-space:pre-wrap;">+ ${JSON.stringify(change.new) || 'null'}</div>
+              </div>
+            </div>`;
+          } else {
+             htmlContent += `<div style="margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+              <div style="background:#e2e8f0; padding:6px 12px; font-weight:700; color:#334155;">Thuộc tính: <span style="color:#2563eb;">${key}</span></div>
+              <div style="padding:10px; color:#047857; background:#f0fdf4; font-family:monospace; font-size:13px; white-space:pre-wrap;">${JSON.stringify(change) || 'null'}</div>
+            </div>`;
+          }
+        }
+      } else if (createdObj) {
+        htmlContent += '<h4 style="margin:0 0 12px 0; color:#16a34a; font-size:16px; border-bottom:2px solid #bbf7d0; padding-bottom:6px;">Dữ liệu bài tập đã tạo:</h4>';
+        htmlContent += `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-family:monospace; font-size:13px; white-space:pre-wrap; color:#334155;">${JSON.stringify(createdObj, null, 2)}</div>`;
+      } else if (deletedObj) {
+        htmlContent += '<h4 style="margin:0 0 12px 0; color:#dc2626; font-size:16px; border-bottom:2px solid #fecaca; padding-bottom:6px;">Dữ liệu bài tập đã xóa:</h4>';
+        htmlContent += `<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; font-family:monospace; font-size:13px; white-space:pre-wrap; color:#991b1b;">${JSON.stringify(deletedObj, null, 2)}</div>`;
+      } else if (detailsObj.before && detailsObj.after) {
+        htmlContent += '<h4 style="margin:0 0 12px 0; color:#2563eb; font-size:16px; border-bottom:2px solid #bfdbfe; padding-bottom:6px;">Sự thay đổi (Trước và Sau):</h4>';
+        for (const key in detailsObj.after) {
+          const beforeVal = detailsObj.before[key];
+          const afterVal = detailsObj.after[key];
+          if (JSON.stringify(beforeVal) !== JSON.stringify(afterVal)) {
+            htmlContent += `<div style="margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+              <div style="background:#e2e8f0; padding:6px 12px; font-weight:700; color:#334155;">Thuộc tính: <span style="color:#2563eb;">${key}</span></div>
+              <div style="padding:10px; display:flex; flex-direction:column; gap:6px;">
+                <div style="color:#b91c1c; background:#fef2f2; padding:8px 12px; border-radius:6px; border-left:4px solid #ef4444; font-family:monospace; font-size:13px; white-space:pre-wrap;">- ${JSON.stringify(beforeVal) || 'null'}</div>
+                <div style="color:#047857; background:#f0fdf4; padding:8px 12px; border-radius:6px; border-left:4px solid #10b981; font-family:monospace; font-size:13px; white-space:pre-wrap;">+ ${JSON.stringify(afterVal) || 'null'}</div>
+              </div>
+            </div>`;
+          }
+        }
+      } else {
+        htmlContent += '<h4 style="margin:0 0 12px 0; color:#475569; font-size:16px; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">Ghi chú / Chi tiết:</h4>';
+        const displayStr = typeof data.details === 'string' ? data.details : JSON.stringify(detailsObj, null, 2);
+        htmlContent += `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-family:monospace; font-size:13px; white-space:pre-wrap; color:#334155;">${displayStr}</div>`;
+      }
+      htmlContent += '</div>';
+
+      let modal = document.getElementById('lec-activity-details-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'lec-activity-details-modal';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(3px);';
+        modal.innerHTML = `
+          <div style="background:white; width:90%; max-width:650px; border-radius:16px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
+            <div style="padding:20px 24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+              <h3 id="ladm-title" style="margin:0; font-size:18px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:8px;">👁️ Chi tiết thay đổi</h3>
+              <button onclick="document.getElementById('lec-activity-details-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#94a3b8; cursor:pointer; line-height:1;">&times;</button>
+            </div>
+            <div id="ladm-body" style="padding:24px; overflow-y:auto; flex:1;">
+            </div>
+            <div style="padding:16px 24px; border-top:1px solid #f1f5f9; text-align:right; background:#f8fafc;">
+              <button onclick="document.getElementById('lec-activity-details-modal').style.display='none'" style="background:#6366f1; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;">Đóng</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+
+      document.getElementById('ladm-title').innerHTML = `👁️ Chi tiết hoạt động: <span style="color:#6366f1;">${data.exercise_id || data.action || 'Log'}</span>`;
+      document.getElementById('ladm-body').innerHTML = infoHtml + htmlContent;
+      modal.style.display = 'flex';
     }
 
     // Handle ALL menu sections
@@ -1891,13 +2054,18 @@
     }
 
     function getSelectedExercises() {
-      if (selectedExportIds.size === 0) return allExportExercises;
       return allExportExercises.filter(ex => selectedExportIds.has(ex.id));
     }
 
     async function exportSelectedExcel() {
       const exercises = getSelectedExercises();
       const status = document.getElementById('export-status');
+      if (exercises.length === 0) {
+        if (status) status.innerHTML = '<span style="color:#ef4444">❌ Vui lòng chọn ít nhất 1 bài tập để xuất.</span>';
+        alert('Vui lòng chọn ít nhất 1 bài tập để xuất Excel.');
+        return;
+      }
+      
       if (status) status.innerHTML = '<span style="color:#f59e0b">⏳ Đang xuất ' + exercises.length + ' bài tập...</span>';
       try {
         const exercise_ids = exercises.map(ex => ex.id);
@@ -1923,12 +2091,18 @@
 
     function exportSelectedJSON() {
       const exercises = getSelectedExercises();
+      const status = document.getElementById('export-status');
+      if (exercises.length === 0) {
+        if (status) status.innerHTML = '<span style="color:#ef4444">❌ Vui lòng chọn ít nhất 1 bài tập để xuất.</span>';
+        alert('Vui lòng chọn ít nhất 1 bài tập để xuất JSON.');
+        return;
+      }
+      
       const blob = new Blob([JSON.stringify(exercises, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = 'bai_tap_export.json'; a.click();
       URL.revokeObjectURL(url);
-      const status = document.getElementById('export-status');
       if (status) status.innerHTML = '<span style="color:#16a34a">✅ Đã xuất ' + exercises.length + ' bài tập dạng JSON!</span>';
     }
 

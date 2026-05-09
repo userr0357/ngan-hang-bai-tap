@@ -1,4 +1,4 @@
-# Ngân Hàng Bài Tập (PTUD)
+# Ngân Hàng Bài Tập
 
 Ứng dụng mẫu quản lý ngân hàng bài tập cho nhiều môn học. Dữ liệu hiện lưu trong `db.json`.
 
@@ -18,7 +18,7 @@ git --version
 2. Chạy script deploy (thay `REMOTE_URL` và `PAT`):
 
 ```powershell
-cd D:\3\PTUD
+cd D:\3\NganHangBaiTap
 .\scripts\deploy_to_github.ps1 -RemoteUrl "https://github.com/<your-username>/<repo>.git" -Token "<YOUR_PERSONAL_ACCESS_TOKEN>"
 ```
 
@@ -35,7 +35,7 @@ Local prototype web app (Student & Lecturer views) built with Node.js + Express 
 Quick start (Windows PowerShell):
 
 ```powershell
-cd d:\3\PTUD
+cd d:\3\NganHangBaiTap
 npm install
 npm run start
 # Open http://localhost:3000 in your browser

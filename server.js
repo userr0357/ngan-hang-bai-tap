@@ -43,6 +43,21 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==================================================
+//  FILE DOWNLOAD ROUTE
+// ==================================================
+app.get('/uploads/:filename', (req, res) => {
+  const filename = req.params.filename;
+  // Security: only alphanumeric + dash/underscore (no path traversal)
+  if (!/^[a-zA-Z0-9_\-\.]+$/.test(filename)) return res.status(400).send('Invalid filename');
+  const filePath = path.join(UPLOAD_DIR, filename);
+  if (!fs.existsSync(filePath)) return res.status(404).send('File not found');
+  // Try to get originalname from query param (set by frontend link)
+  const originalname = req.query.name ? decodeURIComponent(req.query.name) : filename;
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(originalname)}`);
+  res.sendFile(filePath);
+});
+
+// ==================================================
 //  AUTH MIDDLEWARE
 // ==================================================
 function auth(req, res, next) {
@@ -244,9 +259,25 @@ app.post('/api/lecturer/reset-password', async (req, res) => {
 // ==================================================
 //  EXERCISE CRUD (MSSQL)
 // ==================================================
+
+app.get('/api/next-id', auth, async (req, res) => {
+  try {
+    const { subject_id, form_id } = req.query;
+    if (!subject_id || !form_id) return res.status(400).json({ error: 'Missing params' });
+    const data = await db.getNextExerciseId(subject_id, form_id);
+    res.json(data);
+  } catch (err) {
+    console.error('API /next-id error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 app.post('/api/exercise', auth, upload.array('files'), async (req, res) => {
   try {
     const payload = req.body;
+    console.log('[POST /api/exercise] body keys:', Object.keys(payload || {}), '| exercise present:', !!payload.exercise);
+    if (!payload.exercise) {
+      return res.status(400).json({ error: 'Thiếu dữ liệu bài tập (exercise field missing). Vui lòng thử lại.' });
+    }
     const exercise = JSON.parse(payload.exercise);
     if (req.files && req.files.length) {
       exercise.attached_files = req.files.map(f => ({ originalname: f.originalname, filename: path.basename(f.path) }));
@@ -261,8 +292,15 @@ app.post('/api/exercise', auth, upload.array('files'), async (req, res) => {
           .catch(e => console.error('Sync error:', e));
     }
     
-    res.json(result);
-  } catch (err) { console.error('POST /api/exercise error', err.message); res.status(500).json({ error: 'Server error' }); }
+    res.json({ ...result, subject_id: payload.subject_id, form_id: payload.form_id });
+  } catch (err) {
+    console.error('POST /api/exercise error', err.message);
+    // Return meaningful error to frontend
+    if (err.message && err.message.includes('UNIQUE KEY')) {
+      return res.status(409).json({ error: 'Mã bài tập này đã tồn tại. Vui lòng tải lại trang và thử lại.' });
+    }
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
 });
 
 app.put('/api/exercise/:id', auth, upload.array('files'), async (req, res) => {
@@ -554,7 +592,11 @@ app.post('/api/ai/generate-exercise', auth, async (req, res) => {
     });
   }
   try {
-    const aiPrompt = `Bạn là trợ lý giáo viên. Soạn bài tập cho môn "${subject_name||subject_id}", độ khó "${difficulty||'Trung bình'}", tên: "${exercise_title}", dạng: "${exercise_type}", yêu cầu: "${prompt}". Phần sinh: ${type||'toàn bộ'}. Trả về ĐÚNG JSON (không giải thích thêm, không bọc bằng markdown, chỉ JSON thuần túy): {"description":"...","requirements":["..."],"grading_criteria":[{"name":"...","points":N}]}`; // N là trọng số phần trăm (%), tổng các phần bằng 100
+    const aiPrompt = `Bạn là Giảng viên Đại học IT vô cùng khắt khe. Soạn bài tập cho môn "${subject_name||subject_id}", độ khó "${difficulty||'Trung bình'}", tên: "${exercise_title}", dạng: "${exercise_type}", yêu cầu: "${prompt}". Phần sinh: ${type||'toàn bộ'}.
+QUY TẮC BẮT BUỘC:
+1. Phần "requirements" phải có ít nhất 1-2 yêu cầu xử lý ngoại lệ (edge cases) cực kỳ cụ thể.
+2. Phần "grading_criteria" NGHIÊM CẤM dùng các từ chung chung như "Chất lượng code", "Kết quả đúng". Bạn phải bẻ nhỏ thành các tiêu chí testcase cực kỳ cụ thể (Ví dụ: "Xử lý đúng mảng rỗng (10%)", "Thuật toán tối ưu (20%)", "Comment code (10%)").
+3. Trả về ĐÚNG JSON thuần túy (không giải thích thêm, không bọc bằng markdown, chỉ JSON): {"description":"...","requirements":["..."],"grading_criteria":[{"name":"...","points":N}]} // N là trọng số phần trăm, tổng các points phải bằng 100`;
     const aiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -578,6 +620,46 @@ app.post('/api/ai/generate-exercise', auth, async (req, res) => {
     const parsed = JSON.parse(aiText);
     res.json({ success: true, ...parsed });
   } catch (e) { console.error('AI generate:', e.message); res.status(500).json({ error: 'Lỗi AI' }); }
+});
+
+app.post('/api/ai/validate-exercise', auth, async (req, res) => {
+  const { title, description, requirements, grading_criteria, skill_level } = req.body;
+  if (!process.env.GROQ_API_KEY) {
+    return res.json({ status: 'warning', feedback: 'Chưa cấu hình GROQ_API_KEY.', suggestions: ['Vui lòng cấu hình API Key.'] });
+  }
+  try {
+    const aiPrompt = `Bạn là một Giảng viên phản biện (Reviewer) siêu cấp. Đọc đề bài sau:
+Tên: "${title}"
+Mô tả: "${description}"
+Yêu cầu: ${JSON.stringify(requirements)}
+Tiêu chí: ${JSON.stringify(grading_criteria)}
+Level kỹ năng: ${skill_level}
+
+Nhiệm vụ:
+1. Phân tích logic của đề bài. Có bị thiếu trường hợp ngoại lệ (edge cases) như mảng rỗng, chuỗi rỗng, số âm, overflow không?
+2. Tiêu chí chấm điểm hiện tại có quá chung chung không? Nếu có, hãy ĐỀ XUẤT bộ tiêu chí cực kỳ chi tiết thay thế.
+3. CHỐNG ĐẠO ĐỀ / LÀM MỚI BÀI TẬP: Đề bài này có đang là một bài kinh điển quá đỗi quen thuộc (như tìm số nguyên tố, tính tổng...) không? Hãy sáng tạo ra một "Cốt truyện/Ngữ cảnh thực tế" (Storyline) hoàn toàn mới mẻ (Ví dụ: áp dụng vào xử lý dữ liệu ngân hàng, game, an ninh mạng, AI...) để "bình cũ rượu mới" bài tập này, giúp bài tập trở nên hấp dẫn và tránh bị trùng lặp 100% với đề cũ.
+4. Trả về ĐÚNG 1 JSON thuần túy (không markdown, không giải thích ngoài JSON):
+{
+  "status": "valid", // Hoặc "warning", "invalid"
+  "feedback": "Nhận xét tổng quan của bạn về đề bài...",
+  "suggestions": ["Gợi ý 1...", "Gợi ý 2..."],
+  "improved_grading_criteria": [{"name": "Tiêu chí chi tiết 1", "points": 20}, {"name": "Tiêu chí 2", "points": 30}], // Đảm bảo tổng points = 100
+  "suggested_storyline": "Một đoạn văn mô tả cốt truyện mới..."
+}`;
+    const aiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: aiPrompt }], model: 'llama-3.1-8b-instant', temperature: 0.3 })
+    });
+    const data = await aiRes.json();
+    if (!data.choices?.[0]?.message?.content) throw new Error('AI failed');
+    let aiText = data.choices[0].message.content.trim();
+    const firstBrace = aiText.indexOf('{');
+    const lastBrace = aiText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) aiText = aiText.substring(firstBrace, lastBrace + 1);
+    res.json(JSON.parse(aiText));
+  } catch (e) { console.error('AI validate:', e.message); res.status(500).json({ error: 'Lỗi AI Validator' }); }
 });
 
 app.post('/api/ai/check-duplicates', auth, async (req, res) => {

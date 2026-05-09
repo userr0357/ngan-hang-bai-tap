@@ -53,32 +53,33 @@ async function loadDuplicatesSection() {
 }
 
 async function startDuplicateScan() {
-    if (!confirm("Bắt đầu quét chéo toàn hệ thống? Quá trình này có thể mất vài giây đến vài phút.")) return;
-    
-    const btn = document.getElementById('btn-start-scan');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Đang quét...';
-    }
-    
-    try {
-        const res = await fetch('/api/duplicate/scan', { method: 'POST', credentials: 'include' });
-        const data = await res.json();
-        if (res.ok) {
-            alert(`Quét hoàn tất! Đã kiểm tra ${data.totalChecked} bài. Phát hiện thêm ${data.duplicatesFound} trường hợp nghi ngờ.`);
-            loadDuplicatesSection();
-        } else {
-            alert('Lỗi quét: ' + data.error);
-        }
-    } catch (e) {
-        alert('Lỗi kết nối.');
-    } finally {
+    showCustomConfirm("Bắt đầu quét chéo toàn hệ thống?<br><br><span style='font-size:14px;color:var(--text-muted)'>Quá trình quét bằng AI Groq có thể mất vài giây đến vài phút tùy vào số lượng bài tập.</span>", async () => {
+        const btn = document.getElementById('btn-start-scan');
         if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Quét Toàn Hệ Thống';
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Đang quét...';
         }
-    }
+        
+        try {
+            const res = await fetch('/api/duplicate/scan', { method: 'POST', credentials: 'include' });
+            const data = await res.json();
+            if (res.ok) {
+                showCustomAlert(`Đã kiểm tra xong ${data.totalChecked} bài tập bằng AI.<br><br><b style="color:#ef4444;">Phát hiện thêm ${data.duplicatesFound} trường hợp nghi ngờ sao chép!</b>`);
+                loadDuplicatesSection();
+            } else {
+                showCustomAlert('Lỗi quét: ' + data.error, true);
+            }
+        } catch (e) {
+            showCustomAlert('Lỗi kết nối.', true);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Quét Toàn Hệ Thống';
+            }
+        }
+    });
 }
+
 
 function openDuplicateModal(reportId, isHistory = false) {
     let report = null;
@@ -199,31 +200,126 @@ function closeDuplicateModal() {
     document.getElementById('duplicate-modal').style.display = 'none';
 }
 
+function showCustomConfirm(message, onConfirm) {
+    const oldModal = document.getElementById('custom-confirm-modal');
+    if (oldModal) oldModal.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'custom-confirm-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+    
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--card-bg,#fff);width:90%;max-width:400px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.2);overflow:hidden;animation:popIn 0.2s ease-out;';
+    
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);background:#fef2f2;color:#dc2626;font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px;';
+    header.innerHTML = '⚠️ Xác nhận thao tác';
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:20px;font-size:15px;color:var(--text-main,#1e293b);line-height:1.5;';
+    body.innerHTML = message;
+
+    const footer = document.createElement('div');
+    footer.style.cssText = 'padding:12px 20px;border-top:1px solid var(--border-color,#e2e8f0);display:flex;justify-content:flex-end;gap:10px;background:var(--bg-color,#f8fafc);';
+
+    const btnCancel = document.createElement('button');
+    btnCancel.innerHTML = 'Hủy bỏ';
+    btnCancel.style.cssText = 'padding:8px 16px;border:1.5px solid var(--border-color,#e2e8f0);border-radius:8px;background:none;cursor:pointer;font-weight:600;color:var(--text-muted,#64748b);font-family:inherit;';
+    btnCancel.onclick = () => overlay.remove();
+
+    const btnOk = document.createElement('button');
+    btnOk.innerHTML = 'Xác nhận';
+    btnOk.style.cssText = 'padding:8px 16px;border:none;border-radius:8px;background:#ef4444;color:white;cursor:pointer;font-weight:700;font-family:inherit;';
+    btnOk.onclick = () => { overlay.remove(); onConfirm(); };
+
+    footer.appendChild(btnCancel);
+    footer.appendChild(btnOk);
+    box.appendChild(header);
+    box.appendChild(body);
+    box.appendChild(footer);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    if (!document.getElementById('custom-confirm-style')) {
+        const style = document.createElement('style');
+        style.id = 'custom-confirm-style';
+        style.innerHTML = '@keyframes popIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }';
+        document.head.appendChild(style);
+    }
+}
+
+function showCustomAlert(message, isError = false) {
+    const oldModal = document.getElementById('custom-alert-modal');
+    if (oldModal) oldModal.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'custom-alert-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+    
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--card-bg,#fff);width:90%;max-width:400px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.2);overflow:hidden;animation:popIn 0.2s ease-out;';
+    
+    const header = document.createElement('div');
+    const headerBg = isError ? '#fef2f2' : '#f0fdf4';
+    const headerColor = isError ? '#dc2626' : '#16a34a';
+    const headerIcon = isError ? '❌' : '✅';
+    const headerTitle = isError ? 'Thông báo lỗi' : 'Thành công';
+    
+    header.style.cssText = `padding:16px 20px;border-bottom:1px solid var(--border-color,#e2e8f0);background:${headerBg};color:${headerColor};font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px;`;
+    header.innerHTML = `${headerIcon} ${headerTitle}`;
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:20px;font-size:15px;color:var(--text-main,#1e293b);line-height:1.5;';
+    body.innerHTML = message;
+
+    const footer = document.createElement('div');
+    footer.style.cssText = 'padding:12px 20px;border-top:1px solid var(--border-color,#e2e8f0);display:flex;justify-content:flex-end;gap:10px;background:var(--bg-color,#f8fafc);';
+
+    const btnOk = document.createElement('button');
+    btnOk.innerHTML = 'Đóng';
+    btnOk.style.cssText = `padding:8px 16px;border:none;border-radius:8px;background:${isError ? '#ef4444' : '#16a34a'};color:white;cursor:pointer;font-weight:700;font-family:inherit;`;
+    btnOk.onclick = () => overlay.remove();
+
+    footer.appendChild(btnOk);
+    box.appendChild(header);
+    box.appendChild(body);
+    box.appendChild(footer);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    if (!document.getElementById('custom-confirm-style')) {
+        const style = document.createElement('style');
+        style.id = 'custom-confirm-style';
+        style.innerHTML = '@keyframes popIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }';
+        document.head.appendChild(style);
+    }
+}
+
 async function handleDuplicateAction(action) {
     const reportId = document.getElementById('current-dup-report-id').value;
     if (!reportId) return;
     
     const actionName = action === 'MERGE' ? 'GỘP BÀI (Xóa Bài B)' : 'HỢP LỆ (Bỏ qua)';
-    if (!confirm(`Bạn có chắc chắn muốn thực hiện hành động: ${actionName}?`)) return;
-    
-    try {
-        const res = await fetch(`/api/duplicate/reports/${reportId}/action`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include',
-            body: JSON.stringify({ action })
-        });
-        
-        if (res.ok) {
-            closeDuplicateModal();
-            loadDuplicatesSection(); // Refresh
-        } else {
-            const data = await res.json();
-            alert('Lỗi: ' + data.error);
+    showCustomConfirm(`Bạn có chắc chắn muốn thực hiện hành động:<br><br><b style="color:#ef4444;font-size:16px;">${actionName}</b> ?`, async () => {
+        try {
+            const res = await fetch(`/api/duplicate/reports/${reportId}/action`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({ action })
+            });
+            
+            if (res.ok) {
+                closeDuplicateModal();
+                loadDuplicatesSection(); // Refresh
+            } else {
+                const data = await res.json();
+                showCustomAlert('Lỗi: ' + data.error, true);
+            }
+        } catch(e) {
+            showCustomAlert('Lỗi kết nối', true);
         }
-    } catch(e) {
-        alert('Lỗi kết nối');
-    }
+    });
 }
 
 async function loadDuplicateHistory() {
@@ -284,16 +380,17 @@ async function loadDuplicateHistory() {
 }
 
 async function restoreDuplicateReport(reportId) {
-    if (!confirm("Khôi phục lại quyết định này? (Bài B sẽ được đưa trở lại danh sách nếu đã bị xóa gộp)")) return;
-    try {
-        const res = await fetch(`/api/duplicate/reports/${reportId}/restore`, { method: 'POST', credentials: 'include' });
-        if (res.ok) {
-            loadDuplicatesSection(); // Refresh both tables
-        } else {
-            const data = await res.json();
-            alert('Lỗi: ' + data.error);
+    showCustomConfirm("Khôi phục lại quyết định này?<br><br><span style='font-size:14px;color:var(--text-muted)'>Bài B sẽ được đưa trở lại danh sách quản lý nếu đã bị xóa gộp.</span>", async () => {
+        try {
+            const res = await fetch(`/api/duplicate/reports/${reportId}/restore`, { method: 'POST', credentials: 'include' });
+            if (res.ok) {
+                loadDuplicatesSection(); // Refresh both tables
+            } else {
+                const data = await res.json();
+                showCustomAlert('Lỗi: ' + data.error, true);
+            }
+        } catch(e) {
+            showCustomAlert('Lỗi kết nối', true);
         }
-    } catch(e) {
-        alert('Lỗi kết nối');
-    }
+    });
 }

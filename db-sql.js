@@ -51,7 +51,12 @@ function serializeRequirements(arr) {
 function serializeGradingCriteria(arr) {
   if (!arr) return '[]';
   if (typeof arr === 'string') return arr;
-  return JSON.stringify({ tieu_chi: arr.map(g => typeof g === 'string' ? g : (g.name || '')) });
+  // Save full objects with name + points + note to preserve all fields
+  return JSON.stringify(arr.map(g =>
+    typeof g === 'string'
+      ? { name: g, points: 0, note: '' }
+      : { name: g.name || '', points: Number(g.points) || 0, note: g.note || '' }
+  ));
 }
 
 // ── READ: Build nested subjects structure ──
@@ -107,8 +112,8 @@ async function getAllSubjects(filterMaMon) {
       if (row.MaBaiTap != null) {
         const formats = fmtMap[row.BaiTapPK] || [];
         let crit = parseGradingCriteria(row.TieuChiChamDiem);
-        const totalPts = crit.reduce((sum, c) => sum + (c.points || 0), 0);
-        if (totalPts === 0 && formCriteriaMap[row.MaDangBai]) {
+        // Only fall back to form defaults if this exercise has NO custom criteria saved
+        if (crit.length === 0 && formCriteriaMap[row.MaDangBai]) {
           crit = formCriteriaMap[row.MaDangBai];
         }
         form.exercises.push({
@@ -210,15 +215,54 @@ async function deleteExercise(maBaiTap, currentUserId) {
 
 async function getNextExerciseId(subjectId, formId) {
   const pool = await getPool();
+
+  // Get all existing IDs for this subject+form
   const r = await pool.request()
     .input('mon', mssql.VarChar, subjectId)
     .input('dang', mssql.Int, parseInt(formId))
-    .query('SELECT MaBaiTap FROM BAITAP WHERE MaMon = @mon AND MaDangBai = @dang AND (IsDeleted = 0 OR IsDeleted IS NULL)');
-  const ids = r.recordset.map(row => row.MaBaiTap);
-  const nums = ids.map(id => { const m = String(id).match(/(\d+)$/); return m ? parseInt(m[1]) : 0; }).filter(n => !isNaN(n));
-  const next = nums.length ? Math.max(...nums) + 1 : 1;
-  const prefix = `${subjectId}_${formId}.`;
-  return { next_id: `${prefix}${next}`, prefix, count: ids.length };
+    .query('SELECT MaBaiTap FROM BAITAP WHERE MaMon = @mon AND MaDangBai = @dang AND (IsDeleted = 0 OR IsDeleted IS NULL) AND MaBaiTap IS NOT NULL AND MaBaiTap != \'\'');
+
+  const ids = r.recordset.map(row => row.MaBaiTap).filter(Boolean);
+
+  // Detect prefix from existing IDs (e.g. 'KTLT_D1_' from 'KTLT_D1_05')
+  // Pattern: PREFIX_DIGITS where PREFIX contains letters/underscores
+  let prefix = null;
+  let maxNum = 0;
+
+  if (ids.length > 0) {
+    // Try to detect pattern: everything up to and including the last underscore
+    const sample = ids[0];
+    const lastUnderscore = sample.lastIndexOf('_');
+    if (lastUnderscore > 0) {
+      prefix = sample.substring(0, lastUnderscore + 1); // e.g. 'KTLT_D1_'
+    }
+
+    // Find max sequential number among IDs that share this prefix
+    for (const id of ids) {
+      if (prefix && id.startsWith(prefix)) {
+        const numPart = id.substring(prefix.length);
+        const n = parseInt(numPart, 10);
+        if (!isNaN(n) && n > maxNum) maxNum = n;
+      }
+    }
+  }
+
+  // If no prefix detected from existing data, build one from formId order
+  if (!prefix) {
+    // Figure out which order (D1, D2...) this formId is for this subject
+    const allForms = await pool.request()
+      .input('mon', mssql.VarChar, subjectId)
+      .query('SELECT MaDangBai FROM DANGBAI WHERE MaMon = @mon ORDER BY MaDangBai ASC');
+    const formIds = allForms.recordset.map(row => row.MaDangBai);
+    const formOrder = formIds.indexOf(parseInt(formId)) + 1; // 1-based
+    prefix = `${subjectId}_D${formOrder > 0 ? formOrder : 1}_`;
+  }
+
+  const nextNum = maxNum + 1;
+  const paddedNum = String(nextNum).padStart(2, '0'); // e.g. 01, 02, 11, 12
+  const next_id = `${prefix}${paddedNum}`;
+
+  return { next_id, prefix, count: ids.length };
 }
 
 async function getExerciseTitles(subjectId) {

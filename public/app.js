@@ -12,6 +12,49 @@ async function fetchJSON(url, opts) {
   return res.json();
 }
 
+// Custom confirm modal — replaces native confirm() with a styled dialog
+function showConfirmModal({ title = 'Xác nhận', body = '', confirmText = 'Đồng ý', cancelText = 'Huỷ', type = 'warning' } = {}) {
+  return new Promise(resolve => {
+    // Remove any existing
+    const old = document.getElementById('_custom-confirm-modal');
+    if (old) old.remove();
+
+    const colorMap = { warning: { bg: '#fffbeb', border: '#fde68a', icon: '⚠️', btn: '#f59e0b', btnHover: '#d97706' },
+                       danger:  { bg: '#fef2f2', border: '#fecaca', icon: '🚫', btn: '#ef4444', btnHover: '#dc2626' },
+                       info:    { bg: '#eff6ff', border: '#bfdbfe', icon: 'ℹ️', btn: '#3b82f6', btnHover: '#2563eb' } };
+    const c = colorMap[type] || colorMap.warning;
+
+    const el = document.createElement('div');
+    el.id = '_custom-confirm-modal';
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);animation:fadeIn .15s ease';
+    el.innerHTML = `
+      <div style="background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,0.2);max-width:440px;width:92%;overflow:hidden;animation:slideUp .2s ease">
+        <div style="background:${c.bg};border-bottom:1px solid ${c.border};padding:20px 24px 16px;display:flex;align-items:flex-start;gap:14px">
+          <span style="font-size:28px;line-height:1;flex-shrink:0">${c.icon}</span>
+          <div>
+            <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px">${escapeHtml(title)}</div>
+            <div style="font-size:14px;color:#475569;line-height:1.6">${body}</div>
+          </div>
+        </div>
+        <div style="padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;background:#f8fafc">
+          <button id="_ccm-cancel" style="padding:9px 20px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:14px;font-weight:600;cursor:pointer">${escapeHtml(cancelText)}</button>
+          <button id="_ccm-confirm" style="padding:9px 20px;border-radius:8px;border:none;background:${c.btn};color:#fff;font-size:14px;font-weight:700;cursor:pointer">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>
+      <style>
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+        #_ccm-confirm:hover{opacity:.9} #_ccm-cancel:hover{background:#f1f5f9}
+      </style>`;
+
+    document.body.appendChild(el);
+    const cleanup = (val) => { el.remove(); resolve(val); };
+    document.getElementById('_ccm-confirm').onclick = () => cleanup(true);
+    document.getElementById('_ccm-cancel').onclick  = () => cleanup(false);
+    el.addEventListener('click', e => { if (e.target === el) cleanup(false); });
+  });
+}
+
 const state = { subjects: [], currentSubject: null, expandedForms: {}, searchQuery: '', currentPage: 1, formsPerPage: 2 }; 
 
 // difficulty order mapping (lowercased keys)
@@ -158,7 +201,9 @@ function normalizeSubjectCriteria(subject) {
 
 function renderSubject() {
   const s = state.currentSubject;
-  document.getElementById('subject-title').textContent = s.subject_name;
+  const titleEl = document.getElementById('subject-title');
+  if (!titleEl || !s) return; // Not on student page, skip silently
+  titleEl.textContent = s.subject_name;
   const descEl = document.getElementById('subject-desc');
   if (descEl) descEl.textContent = s.description || '';
   const container = document.getElementById('forms-container');
@@ -481,13 +526,20 @@ async function showExercise(ex, parentForm) {
     </div>`).join('');
 
   d.innerHTML = `
-    <div class="detail-header" style="background:var(--bg-main); border-bottom:1px solid var(--border); padding:24px 32px 16px;">
-      <button class="close-ex" id="exercise-close-btn" title="Đóng" style="color:var(--text-muted); background:var(--bg-card); border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.05); z-index:2;">×</button>
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-        <span style="background:#4f46e5; color:#fff; font-size:12px; font-weight:700; text-transform:uppercase; padding:4px 10px; border-radius:20px; letter-spacing:0.5px;">${escapeHtml(ex.id || '#')}</span>
+    <div class="detail-header" style="background:var(--bg-main); border-bottom:1px solid var(--border); padding:20px 24px 16px;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div style="flex:1; min-width:0;">
+          <div style="margin-bottom:10px;">
+            <span style="background:#4f46e5; color:#fff; font-size:12px; font-weight:700; text-transform:uppercase; padding:4px 12px; border-radius:20px; letter-spacing:0.5px;">${escapeHtml(ex.id || '#')}</span>
+          </div>
+          <h2 style="font-size:22px; color:var(--text-heading); line-height:1.3; margin-bottom:6px; margin-top:0;">${escapeHtml(ex.title)}</h2>
+          <div class="detail-sub" style="font-size:15px; color:var(--text-muted); font-weight:500;">Ngân hàng Bài tập • Dạng bài: <strong>${escapeHtml((parentForm && parentForm.name) ? parentForm.name : 'Chung')}</strong></div>
+        </div>
+        <button id="exercise-close-btn" title="Đóng"
+          style="flex-shrink:0; width:36px; height:36px; border-radius:50%; background:var(--bg-card); border:1px solid var(--border); color:var(--text-muted); font-size:20px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.06); transition:all 0.15s;"
+          onmouseover="this.style.background='#fee2e2'; this.style.borderColor='#fca5a5'; this.style.color='#dc2626';"
+          onmouseout="this.style.background='var(--bg-card)'; this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)';">×</button>
       </div>
-      <h2 style="font-size:25px; color:var(--text-heading); line-height:1.3; margin-bottom:6px;">${escapeHtml(ex.title)}</h2>
-      <div class="detail-sub" style="font-size:16px; color:var(--text-muted); font-weight:500;">Ngân hàng Bài tập • Dạng bài: <strong>${escapeHtml((parentForm && parentForm.name) ? parentForm.name : 'Chung')}</strong></div>
     </div>
     
     <div class="detail-meta-grid" style="padding:24px 32px 16px;">
@@ -517,10 +569,24 @@ async function showExercise(ex, parentForm) {
     
     ${(ex.attached_files && ex.attached_files.length) ? `
     <div class="section" style="padding:24px 32px 32px;">
-      <h3 style="color:var(--text-muted); border-bottom:2px solid var(--border); padding-bottom:10px; margin-bottom:16px; font-size:18px; letter-spacing:0.3px;">📎 File đính kèm</h3>
-      <div style="display:inline-flex; align-items:center; gap:8px; background:var(--bg-main); padding:10px 16px; border-radius:10px; border:1px dashed #cbd5e1; font-size:15px; font-weight:600; color:var(--text-heading); transition:background 0.2s;" onmouseover="this.style.background='var(--bg-card)'" onmouseout="this.style.background='var(--bg-main)'">
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-        ${escapeHtml(attached)}
+      <h3 style="color:var(--text-muted); border-bottom:2px solid var(--border); padding-bottom:10px; margin-bottom:16px; font-size:18px; letter-spacing:0.3px;">📎 File đính kèm (${ex.attached_files.length})</h3>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        ${ex.attached_files.map(f => {
+          const fname = f.filename || '';
+          const oname = f.originalname || fname;
+          const ext = oname.split('.').pop().toLowerCase();
+          const iconMap = { pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', zip:'📦', rar:'📦', png:'🖼️', jpg:'🖼️', jpeg:'🖼️', txt:'📃', ppt:'📊', pptx:'📊' };
+          const icon = iconMap[ext] || '📎';
+          const downloadUrl = `/uploads/${encodeURIComponent(fname)}?name=${encodeURIComponent(oname)}`;
+          return `<a href="${downloadUrl}" download="${escapeHtml(oname)}" target="_blank"
+            style="display:inline-flex; align-items:center; gap:10px; background:var(--bg-main); padding:12px 18px; border-radius:10px; border:1px solid #cbd5e1; text-decoration:none; color:var(--text-heading); font-size:15px; font-weight:600; transition:all 0.2s; max-width:fit-content;"
+            onmouseover="this.style.background='#e0e7ff'; this.style.borderColor='#6366f1'; this.style.color='#4f46e5';"
+            onmouseout="this.style.background='var(--bg-main)'; this.style.borderColor='#cbd5e1'; this.style.color='var(--text-heading)';">
+            <span style="font-size:20px;">${icon}</span>
+            <span>${escapeHtml(oname)}</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-left:4px; opacity:0.5;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          </a>`;
+        }).join('')}
       </div>
     </div>
     ` : ''}
@@ -692,17 +758,22 @@ function populateLecturerSelects() {
   const selForm = document.getElementById('form-form');
   if (!selSub) return;
   selSub.innerHTML = '';
-  state.subjects.forEach(s => {
+  // Filter: non-admin lecturers only see their allowed subjects
+  const lec = state.lecturer;
+  const allowedIds = (lec && !lec.is_admin && Array.isArray(lec.allowed_subjects) && lec.allowed_subjects.length)
+    ? lec.allowed_subjects : null;
+  const subjectsToShow = allowedIds ? state.subjects.filter(s => allowedIds.includes(s.subject_id)) : state.subjects;
+  subjectsToShow.forEach(s => {
     const o = document.createElement('option'); o.value = s.subject_id; o.textContent = s.subject_name; selSub.appendChild(o);
   });
   selSub.onchange = () => {
     const sub = state.subjects.find(x => x.subject_id === selSub.value);
     if (!selForm) return;
     selForm.innerHTML = '';
-    sub.forms.forEach(f => { const o = document.createElement('option'); o.value = f.form_id; o.textContent = `${f.name} (${f.difficulty})`; selForm.appendChild(o); });
+    sub.forms.forEach(f => { const o = document.createElement('option'); o.value = f.form_id; o.textContent = `${f.name}`; selForm.appendChild(o); });
     if (selForm.onchange) selForm.onchange();
   };
-  selForm.onchange = () => {
+  selForm.onchange = async () => {
     const sub = state.subjects.find(x => x.subject_id === selSub.value);
     if (!sub) return;
     const form = sub.forms.find(f => f.form_id === selForm.value);
@@ -710,9 +781,22 @@ function populateLecturerSelects() {
     if (form && isNew) {
       currentGrades = JSON.parse(JSON.stringify(form.default_criteria || []));
       renderGradingList();
+      try {
+        const idField = document.getElementById('field-id');
+        if (idField) {
+          idField.value = 'Đang sinh mã...';
+          const res = await fetch(`/api/next-id?subject_id=${encodeURIComponent(selSub.value)}&form_id=${encodeURIComponent(selForm.value)}`);
+          if (res.ok) {
+            const data = await res.json();
+            idField.value = data.next_id || '';
+          } else {
+            idField.value = '';
+          }
+        }
+      } catch (err) { console.error('Lỗi khi sinh mã tự động:', err); }
     }
   };
-  if (state.subjects.length) selSub.onchange();
+  if (subjectsToShow.length) selSub.onchange();
 }
 
 // search handling
@@ -872,13 +956,20 @@ if (exerciseForm) exerciseForm.onsubmit = async (e) => {
     if (checkRes.ok) {
       const checkData = await checkRes.json();
       if (checkData.warning) {
-        const msg = `Cảnh báo: Bài tập này rất giống (${checkData.score}%) với bài "${checkData.matchedTitle}".\n` + 
-                    (checkData.summary ? `\nMục tiêu chung: ${checkData.summary}\n\n` : '\n') +
-                    `Bạn có chắc chắn muốn lưu không?`;
-        if (!confirm(msg)) {
-          return; // Cancel save
+          const bodyHtml = `
+            Bài tập này rất giống <strong>${escapeHtml(checkData.score)}%</strong> với bài
+            <em>"${escapeHtml(checkData.matchedTitle)}"</em>.<br><br>
+            ${checkData.summary ? `<span style="color:#92400e">Mục tiêu chung: ${escapeHtml(checkData.summary)}</span><br><br>` : ''}
+            Bạn có chắc chắn muốn lưu không?`;
+          const go = await showConfirmModal({
+            title: 'Cảnh báo trùng lặp bài tập',
+            body: bodyHtml,
+            confirmText: '✅ Vẫn lưu',
+            cancelText: '✕ Huỷ',
+            type: 'warning'
+          });
+          if (!go) return; // Cancel save
         }
-      }
     }
 
     let res;
@@ -887,18 +978,26 @@ if (exerciseForm) exerciseForm.onsubmit = async (e) => {
     } else {
       res = await fetch('/api/exercise', { method: 'POST', credentials: 'include', body: multipart });
     }
-    if (!res.ok) throw new Error('Failed');
+    if (!res.ok) {
+      let errMsg = 'Lỗi lưu bài tập';
+      try { const errData = await res.json(); errMsg = errData.error || errMsg; } catch {}
+      throw new Error(errMsg);
+    }
     const data = await res.json();
     await loadSubjects();
-    if (state.currentSubject && state.currentSubject.subject_id === data.subject.subject_id) state.currentSubject = data.subject;
+    // Safely refresh current subject view without assuming data.subject exists
+    if (data.subject_id && state.subjects) {
+      const refreshed = state.subjects.find(s => s.subject_id === data.subject_id);
+      if (refreshed) state.currentSubject = refreshed;
+    }
     renderSubject();
     // close modal if present
     try { const modal = document.getElementById('exercise-modal'); if (modal) modal.classList.remove('show'); } catch (e) {}
-    alert('Lưu thành công');
+    alert('Lưu thành công!');
     formEl.reset();
     document.getElementById('original_id').value = '';
     renderManageList();
-  } catch (err) { console.error(err); alert('Lỗi lưu bài tập'); }
+  } catch (err) { console.error(err); alert('Lỗi: ' + (err.message || 'Lỗi không xác định')); }
 };
 
 function renderManageList() {
